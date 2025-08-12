@@ -57,7 +57,6 @@
 <body>
 <canvas id="cv"></canvas>
 
-<!-- top HUD: minimal now; lobby handles name/room -->
 <div id="topbar">
   <div id="title">🧪 Lation‑Cup</div>
   <span id="hud">⏱ 180 • 🟥 0 • ⚡ 1.0x</span>
@@ -68,8 +67,9 @@
   <div id="lobbyCard">
     <h1>Lobby</h1>
     <div id="lobbyRow">
-      <input id="room" placeholder="Room code (e.g. main)" style="flex:1 1 160px">
-      <select id="nameSel" style="flex:1 1 160px"></select>
+      <input id="room" placeholder="Room code (e.g. main)" style="flex:1 1 140px">
+      <input id="nameInp" placeholder="Nickname" list="nameList" style="flex:1 1 160px">
+      <datalist id="nameList"></datalist>
       <button id="enter">Enter lobby</button>
       <button id="ready" disabled>Ready</button>
     </div>
@@ -141,7 +141,8 @@ const UI = {
   // lobby
   lobby: document.getElementById('lobby'),
   room: document.getElementById('room'),
-  nameSel: document.getElementById('nameSel'),
+  nameInp: document.getElementById('nameInp'),
+  nameList: document.getElementById('nameList'),
   enter: document.getElementById('enter'),
   readyBtn: document.getElementById('ready'),
   playersBox: document.getElementById('players'),
@@ -164,8 +165,8 @@ const UI = {
 };
 
 const DEFAULT_NAMES = ["MalluBoi","RookiKeuhko","Imuri","Rutkula","SheebaEnjoyer","Toomo_on_paras","Jape"];
-UI.nameSel.innerHTML = DEFAULT_NAMES.map(n=>`<option>${n}</option>`).join('');
-UI.nameSel.value = DEFAULT_NAMES[Math.floor(Math.random()*DEFAULT_NAMES.length)];
+UI.nameList.innerHTML = DEFAULT_NAMES.map(n=>`<option value="${n}"></option>`).join('');
+UI.nameInp.value = DEFAULT_NAMES[Math.floor(Math.random()*DEFAULT_NAMES.length)];
 UI.room.value = ROOM;
 
 /* ====== Fullscreen canvas sizing ====== */
@@ -183,7 +184,7 @@ sizeCanvas();
 /* ====== World / Player ====== */
 const WORLD = {w:1200,h:900}; // smaller map
 const G = {phase:'lobby', time:180, score:0, mult:1, speedBase:140, t:0};
-const P = {x:WORLD.w/2, y:WORLD.h/2, r:16, color:randColor(), vx:0, vy:0, photo:null, name:UI.nameSel.value};
+const P = {x:WORLD.w/2, y:WORLD.h/2, r:16, color:randColor(), vx:0, vy:0, photo:null, name:UI.nameInp.value};
 const CAM = {x:P.x, y:P.y};
 const ITEMS = new Map();
 const OTHERS = new Map();
@@ -221,21 +222,25 @@ loadImage(PATHS.player,img=>{ DEFAULT_AVATAR=img; P.photo=img; });
 let unsubPlayers=null, unsubItems=null, unsubState=null;
 
 UI.enter.onclick = async () => {
-  ROOM = UI.room.value.trim() || 'main';
-  P.name = UI.nameSel.value;
+  try{
+    ROOM = (UI.room.value||'').trim() || 'main';
+    P.name = (UI.nameInp.value||'').trim() || DEFAULT_NAMES[0];
 
-  if (!FB.enabled) { toast('Firebase required for lobby.'); return; }
+    if (!FB.enabled) { toast('Firebase required for lobby.'); return; }
+    toast('Joining lobby…');
 
-  await FB.auth.signInAnonymously();
-  FB.uid = FB.auth.currentUser.uid;
+    await FB.auth.signInAnonymously();
+    FB.uid = FB.auth.currentUser.uid;
 
-  // Join room player list
-  const pRef = FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`);
-  pRef.onDisconnect().remove();
-  await pRef.set({name:P.name, x:P.x, y:P.y, score:0, ts:Date.now(), color:P.color, ready:false});
-
-  subscribeRoom();
-  UI.readyBtn.disabled = false;
+    const pRef = FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`);
+    pRef.onDisconnect().remove();
+    await pRef.set({name:P.name, x:P.x, y:P.y, score:0, ts:Date.now(), color:P.color, ready:false});
+    subscribeRoom();
+    UI.readyBtn.disabled = false;
+    toast('Joined room ✓');
+  }catch(e){
+    toast('Enter lobby failed: ' + e);
+  }
 };
 
 UI.readyBtn.onclick = async () => {
@@ -281,16 +286,15 @@ function onPlayers(snap){
   UI.pc.textContent = String(count);
   UI.rc.textContent = String(ready);
 
-  // If everybody ready -> switch to countdown (any client may trigger)
+  // everyone ready -> countdown
   if (count>0 && ready===count){
     const sRef = FB.db.ref(`lationcup/rooms/${ROOM}/state`);
     sRef.transaction(cur=>{
-      if (cur && (cur.phase==='countdown' || cur.phase==='playing')) return; 
+      if (cur && (cur.phase==='countdown' || cur.phase==='playing')) return;
       return {phase:'countdown', startAt: Date.now(), duration: 5000};
     });
   }
 
-  // live leaderboard
   renderLeaderboard(v);
 }
 
@@ -334,9 +338,8 @@ function tickCountdown(st){
     const remain = Math.max(0, st.duration - (Date.now() - st.startAt));
     UI.cdNum.textContent = String(Math.ceil(remain/1000));
     if (remain<=0){
-      // flip to playing once
       FB.db.ref(`lationcup/rooms/${ROOM}/state`).transaction(cur=>{
-        if (cur && cur.phase==='playing') return; 
+        if (cur && cur.phase==='playing') return;
         return {phase:'playing', startAt: Date.now()};
       });
     } else {
@@ -346,7 +349,7 @@ function tickCountdown(st){
   requestAnimationFrame(update);
 }
 
-/* ====== Gameplay controls & loop ====== */
+/* ====== Gameplay / loop ====== */
 const Mini = {active:false, taps:0, time:6, progress:0, puffs:0, toggle:false};
 
 let last = performance.now();
@@ -376,7 +379,6 @@ function update(dt){
   CAM.x += (P.x - CAM.x)*0.15;
   CAM.y += (P.y - CAM.y)*0.15;
 
-  // collisions with items
   if (G.phase==='playing' && !Mini.active){
     for (const it of ITEMS.values()){
       if (it.claimedBy) continue;
@@ -398,20 +400,17 @@ function draw(){
   CTX.fillStyle = grd; CTX.fillRect(0,0,w,h);
 
   drawGrid();
-  drawWalls(); // visible solid walls
+  drawWalls();
 
-  // items
   const list = Array.from(ITEMS.values()).filter(i=>!i.claimedBy).sort((a,b)=>a.y-b.y);
   for (const it of list) drawItem(it);
 
-  // others
   for (const g of OTHERS.values()){
     if (Date.now()-g.ts>4000) continue;
     drawPlayer(g.x,g.y,16,g.color, DEFAULT_AVATAR);
     drawName(g.name || 'Anon', g.x, g.y, 16);
   }
 
-  // self
   drawPlayer(P.x,P.y,16,P.color,P.photo||DEFAULT_AVATAR);
   drawName(P.name||'Me', P.x, P.y, 16);
 
@@ -432,11 +431,9 @@ function drawGrid(){
   }
 }
 function drawWalls(){
-  const sTL = worldToScreen(0,0);
   const sBR = worldToScreen(WORLD.w, WORLD.h);
   CTX.strokeStyle = 'rgba(24,255,155,.65)';
   CTX.lineWidth = 6;
-  // outer rectangle (converted to screen)
   CTX.beginPath();
   CTX.rect(
     worldToScreenX(0)+3, worldToScreenY(0)+3,
@@ -450,9 +447,7 @@ function centerText(t, y, size){ CTX.fillStyle='rgba(255,255,255,.9)'; CTX.font 
 function drawPlayer(wx,wy,r,col,photo){
   const s = worldToScreen(wx,wy);
   const rad = r*s.scale;
-  // shadow
   CTX.fillStyle='rgba(0,0,0,.25)'; CTX.beginPath(); CTX.ellipse(s.x, s.y+3*s.scale, rad, rad*0.5, 0, 0, Math.PI*2); CTX.fill();
-  // avatar ring
   CTX.save();
   CTX.beginPath(); CTX.arc(s.x,s.y,rad,0,Math.PI*2); CTX.clip();
   if (photo){ CTX.drawImage(photo, s.x-rad, s.y-rad, rad*2, rad*2); }
@@ -596,6 +591,7 @@ function startPlayWithRemaining(rem){
 }
 function resetGame(){
   G.time=180; G.mult=1; G.score=0;
+  P.name = (UI.nameInp.value||'').trim() || P.name;
   P.x=WORLD.w/2; P.y=WORLD.h/2; P.vx=P.vy=0;
   ITEMS.clear(); MY_CLAIM_PENDING.clear(); MY_CLAIM_RESOLVED.clear();
   for (let i=0;i<25;i++) spawnItem();
@@ -641,6 +637,22 @@ UI.stick.addEventListener('mousedown', e=>{ center=centerOf(UI.stick); const mov
 window.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft'||e.key==='a')keyDir.x=-1; if(e.key==='ArrowRight'||e.key==='d')keyDir.x=1; if(e.key==='ArrowUp'||e.key==='w')keyDir.y=-1; if(e.key==='ArrowDown'||e.key==='s')keyDir.y=1; });
 window.addEventListener('keyup',   e=>{ if(['ArrowLeft','a','ArrowRight','d'].includes(e.key))keyDir.x=0; if(['ArrowUp','w','ArrowDown','s'].includes(e.key))keyDir.y=0; });
 
+/* ===== util fns ===== */
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function rand(min,max){ return Math.random()*(max-min)+min; }
+function randColor(){ const h=Math.floor(Math.random()*360); return `hsl(${h} 85% 60%)`; }
+function getType(it){ return TYPES[it.type] || TYPES.MARLB; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+/* ===== walls lines ===== */
+function worldToScreen(wx,wy){
+  const x = (wx - CAM.x) + CV.clientWidth/2;
+  const y = (wy - CAM.y) + CV.clientHeight/2;
+  const scale = 0.9 + (y/CV.clientHeight)*0.2;
+  return {x,y,scale};
+}
+function worldToScreenX(wx){ return (wx - CAM.x) + CV.clientWidth/2; }
+function worldToScreenY(wy){ return (wy - CAM.y) + CV.clientHeight/2; }
 </script>
 </body>
 </html>
