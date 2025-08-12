@@ -2,22 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Lation‑Cup: Marlboro Hunt 2.5D</title>
 <style>
-  html,body{margin:0;height:100%;background:#08130e;color:#e9ffee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;touch-action:none}
-  #ui{position:fixed;inset:0;display:flex;flex-direction:column;gap:.6rem;align-items:center;padding:10px}
-  .card{background:rgba(255,255,255,.06);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 12px}
-  #top{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
-  input,button,label{font-size:16px}
-  input[type="text"],button{border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#e9ffee;padding:8px 10px}
+  :root { --ui-bg: rgba(0,0,0,.35); --ui-bd: rgba(255,255,255,.2); }
+  html,body{margin:0;height:100%;background:#08130e;color:#e9ffee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overscroll-behavior:none}
+  /* Fullscreen canvas */
+  #cv{position:fixed;inset:0;display:block;width:100vw;height:100dvh;background:linear-gradient(#071f16,#0a2d1f)}
+  /* Top HUD bar */
+  #topbar{position:fixed;left:0;right:0;top:0;padding:8px 10px;display:flex;gap:8px;align-items:center;justify-content:flex-start;background:var(--ui-bg);backdrop-filter:blur(6px);border-bottom:1px solid var(--ui-bd);z-index:20}
+  #title{font-weight:700}
+  #name{min-width:110px}
+  input,button{font-size:16px;border-radius:10px;border:1px solid var(--ui-bd);background:rgba(255,255,255,.08);color:#e9ffee;padding:8px 10px}
   button{cursor:pointer}
-  #wrap{position:relative;width:100%;max-width:540px;aspect-ratio:9/16;border-radius:16px;overflow:hidden}
-  canvas{display:block;width:100%;height:100%;background:linear-gradient(#071f16,#0a2d1f)}
-  #hud{font-variant-numeric:tabular-nums}
-  #leader{width:100%;max-width:540px}
-  /* Mini‑game */
-  #mini{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.55);z-index:10;touch-action:none}
+  #hud{margin-left:auto;font-variant-numeric:tabular-nums}
+  /* Virtual joystick */
+  #stick{position:fixed;left:14px;bottom:14px;width:120px;height:120px;border-radius:60px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);z-index:15;touch-action:none}
+  #knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25)}
+  /* Mini-game overlay */
+  #mini{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.55);z-index:30;touch-action:none}
   #miniInner{display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);padding:14px 16px;border-radius:14px}
   #miniHeader{display:flex;gap:14px;align-items:center;justify-content:center}
   #puffCounter{font-weight:700;font-size:16px;padding:4px 8px;border-radius:8px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.2)}
@@ -27,108 +30,59 @@
   #meter{width:260px;height:18px;border:1px solid rgba(255,255,255,.35);border-radius:12px;overflow:hidden;background:rgba(0,0,0,.25)}
   #bar{height:100%;width:0;background:linear-gradient(90deg,#18ff9b,#66ffd6)}
   #msg{font-size:13px;opacity:.9}
-  /* Joystick */
-  #stick{position:absolute;left:16px;bottom:16px;width:120px;height:120px;border-radius:60px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);z-index:5;touch-action:none}
-  #knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25)}
-  /* Uploaders */
-  #icons{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center}
-  .iconUp{display:flex;flex-direction:column;align-items:center;gap:.25rem}
-  .iconUp input{width:120px}
-  .iconPrev{width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden}
-  .hint{font-size:12px;opacity:.8}
+  /* Error toast */
   #err{position:fixed;right:8px;bottom:8px;max-width:70vw;font:12px/1.3 ui-monospace,Menlo,monospace;background:#280b0b;color:#ffdede;border:1px solid #ff8a80;border-radius:8px;padding:8px;display:none;z-index:999}
+  @media (max-width:480px){
+    #title{display:none}
+  }
 </style>
 </head>
 <body>
-<div id="ui">
-  <div id="top" class="card">
-    <b>🧪 Lation‑Cup</b>
-    <input id="name" placeholder="Your name" style="min-width:120px">
-    <button id="join">Join</button>
-    <button id="start">Start (180s)</button>
-    <span id="hud">⏱ 180 • 🟥 0 • ⚡ 1.0x</span>
-  </div>
+<canvas id="cv"></canvas>
 
-  <div id="wrap" class="card">
-    <canvas id="cv"></canvas>
-
-    <!-- Mini‑game overlay -->
-    <div id="mini">
-      <div id="miniInner">
-        <div id="miniHeader">
-          <div id="puffCounter">Puffs: 0</div>
-          <div id="miniClock">6s</div>
-        </div>
-        <div id="smokeSprite">🚬</div>
-        <button id="tapBtn">SMOKE!</button>
-        <div id="meter"><div id="bar"></div></div>
-        <div id="msg">Tap fast — the bar drains!</div>
-      </div>
-    </div>
-
-    <!-- Virtual joystick -->
-    <div id="stick"><div id="knob"></div></div>
-  </div>
-
-  <!-- Custom icons + mini‑game frames + player photo -->
-  <div class="card" id="icons">
-    <div class="iconUp">
-      <div class="iconPrev" id="prevMarl">🟥</div>
-      <label>🟥 Marlboro<img id="imgMarl" style="display:none"></label>
-      <input type="file" id="fileMarl" accept="image/*">
-    </div>
-    <div class="iconUp">
-      <div class="iconPrev" id="prevCup">🥤</div>
-      <label>🥤 Cup<img id="imgCup" style="display:none"></label>
-      <input type="file" id="fileCup" accept="image/*">
-    </div>
-    <div class="iconUp">
-      <div class="iconPrev" id="prevTank">🛢️</div>
-      <label>🛢️ 25L<img id="imgTank" style="display:none"></label>
-      <input type="file" id="fileTank" accept="image/*">
-    </div>
-    <div class="iconUp">
-      <div class="iconPrev" id="prevShee">🥫</div>
-      <label>🥫 Sheeba<img id="imgShee" style="display:none"></label>
-      <input type="file" id="fileShee" accept="image/*">
-    </div>
-    <div class="iconUp">
-      <div class="iconPrev" id="prevSmoke1">🚬</div>
-      <label>Smoke Frame A<img id="imgSmoke1" style="display:none"></label>
-      <input type="file" id="fileSmoke1" accept="image/*">
-    </div>
-    <div class="iconUp">
-      <div class="iconPrev" id="prevSmoke2">😮‍💨</div>
-      <label>Smoke Frame B<img id="imgSmoke2" style="display:none"></label>
-      <input type="file" id="fileSmoke2" accept="image/*">
-    </div>
-    <div class="iconUp">
-      <div class="iconPrev" id="prevPlayer">🙂</div>
-      <label>Player Photo<img id="imgPlayer" style="display:none"></label>
-      <input type="file" id="filePlayer" accept="image/*">
-    </div>
-
-    <div class="hint">Upload 64×64 images (any size works; they’ll scale). Emojis are used if no image.</div>
-  </div>
-
-  <div id="leader" class="card"><b>Leaderboard</b><div id="lb"></div></div>
+<!-- Top bar -->
+<div id="topbar">
+  <div id="title">🧪 Lation‑Cup</div>
+  <input id="name" placeholder="Your name">
+  <button id="join">Join</button>
+  <button id="start">Start (180s)</button>
+  <span id="hud">⏱ 180 • 🟥 0 • ⚡ 1.0x</span>
 </div>
+
+<!-- Mini-game -->
+<div id="mini">
+  <div id="miniInner">
+    <div id="miniHeader">
+      <div id="puffCounter">Puffs: 0</div>
+      <div id="miniClock">6s</div>
+    </div>
+    <div id="smokeSprite">🚬</div>
+    <button id="tapBtn">SMOKE!</button>
+    <div id="meter"><div id="bar"></div></div>
+    <div id="msg">Tap fast — the bar drains!</div>
+  </div>
+</div>
+
+<!-- Joystick -->
+<div id="stick"><div id="knob"></div></div>
 
 <div id="err"></div>
 
-<!-- Firebase (optional multiplayer) -->
+<!-- Firebase (optional multiplayer: Auth+DB only) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <script>
-/*** ====== MULTIPLAYER (optional) ====== */
+/*** ====== OPTIONAL MULTIPLAYER VIA FIREBASE ======
+  Paste your config below to enable live players/items/leaderboard.
+*****************************************************/
 const firebaseConfig = {
-  // apiKey: "...",
-  // authDomain: "...",
-  // databaseURL: "...",
-  // projectId: "...",
-  // storageBucket: "...",
+  // apiKey: "YOUR_KEY",
+  // authDomain: "your-app.firebaseapp.com",
+  // databaseURL: "https://your-app-default-rtdb.firebaseio.com", // recommended
+  // projectId: "your-app",
+  // storageBucket: "your-app.appspot.com",
   // messagingSenderId: "...",
   // appId: "..."
 };
@@ -142,7 +96,7 @@ try {
   }
 } catch(e){ logErr("Firebase init failed: "+e); }
 
-/* ================= Core Game ================= */
+/* =================== Core =================== */
 const CV = document.getElementById('cv');
 const CTX = CV.getContext('2d');
 const UI = {
@@ -150,7 +104,6 @@ const UI = {
   join: document.getElementById('join'),
   start: document.getElementById('start'),
   hud: document.getElementById('hud'),
-  lb: document.getElementById('lb'),
   mini: document.getElementById('mini'),
   tapBtn: document.getElementById('tapBtn'),
   bar: document.getElementById('bar'),
@@ -160,35 +113,23 @@ const UI = {
   smokeSprite: document.getElementById('smokeSprite'),
   stick: document.getElementById('stick'),
   knob: document.getElementById('knob'),
-  prevMarl: document.getElementById('prevMarl'),
-  prevCup: document.getElementById('prevCup'),
-  prevTank: document.getElementById('prevTank'),
-  prevShee: document.getElementById('prevShee'),
-  fileMarl: document.getElementById('fileMarl'),
-  fileCup: document.getElementById('fileCup'),
-  fileTank: document.getElementById('fileTank'),
-  fileShee: document.getElementById('fileShee'),
-  prevSmoke1: document.getElementById('prevSmoke1'),
-  prevSmoke2: document.getElementById('prevSmoke2'),
-  fileSmoke1: document.getElementById('fileSmoke1'),
-  fileSmoke2: document.getElementById('fileSmoke2'),
-  prevPlayer: document.getElementById('prevPlayer'),
-  filePlayer: document.getElementById('filePlayer'),
 };
 
 UI.name.value = randomName();
 
-// DPR‑aware canvas
-function resizeCanvas(){
+/* ====== Fullscreen canvas sizing ====== */
+function sizeCanvas(){
   const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-  const rect = CV.getBoundingClientRect();
-  CV.width  = Math.round(rect.width  * dpr);
-  CV.height = Math.round(rect.height * dpr);
+  const w = Math.round(window.innerWidth  * dpr);
+  const h = Math.round(window.innerHeight * dpr);
+  CV.width = w; CV.height = h;
   CTX.setTransform(dpr,0,0,dpr,0,0);
 }
-new ResizeObserver(resizeCanvas).observe(CV);
-resizeCanvas();
+window.addEventListener('resize', sizeCanvas);
+window.addEventListener('orientationchange', ()=>setTimeout(sizeCanvas, 100));
+sizeCanvas();
 
+/* ====== Join / Start ====== */
 UI.join.onclick = async () => {
   if (!UI.name.value.trim()) return alert("Enter a name");
   if (FB.enabled) {
@@ -198,8 +139,7 @@ UI.join.onclick = async () => {
       const pRef = FB.db.ref(`lationcup/rooms/default/players/${FB.uid}`);
       pRef.onDisconnect().remove();
       await pRef.set({name:UI.name.value.trim(), x:P.x, y:P.y, score:0, ts:Date.now(), color:P.color});
-      subPlayers();
-      subItems();
+      subPlayers(); subItems();
     } catch(e){
       logErr("Firebase sign‑in failed: "+e);
       alert("Firebase sign‑in failed; continuing single‑player.");
@@ -207,70 +147,55 @@ UI.join.onclick = async () => {
   }
   UI.join.disabled = true;
 };
-
 UI.start.onclick = () => { resetGame(); G.state='play'; UI.start.disabled = true; setTimeout(()=>UI.start.disabled=false,800); };
 
-/* ==== World ==== */
+/* ====== World / Player ====== */
 const WORLD = {w:2000,h:2000};
-const G = {state:'idle', time:180, score:0, mult:1, speedBase:140, t:0}; // 3 min
+const G = {state:'idle', time:180, score:0, mult:1, speedBase:140, t:0}; // 3 minutes
 const P = {x:WORLD.w/2, y:WORLD.h/2, r:16, color:randColor(), vx:0, vy:0, photo:null};
 const CAM = {x:P.x, y:P.y};
 const ITEMS = new Map();
 const OTHERS = new Map();
 
-/* ==== Types & icons ==== */
+/* ====== Images from /images with fallbacks ====== */
+const PATHS = {
+  marl:  '/marlboro.png',
+  cup:   '/cup.png',
+  tank:  '/tank.png',
+  shee:  '/sheeba.png',
+  smoke1:'/smoke1.png',
+  smoke2:'/smoke2.png',
+  player:'/player.png'
+};
+function loadImage(path, onok){
+  const img = new Image();
+  img.onload = ()=> onok && onok(img);
+  img.onerror = ()=> onok && onok(null);
+  img.src = path;
+}
+// Types & emojis
 const TYPES = {
   MARLB: {emoji:'🟥', r:16, img:null},
   CUP:   {emoji:'🥤', r:14, img:null},
   TANK:  {emoji:'🛢️', r:18, img:null},
   SHEE:  {emoji:'🥫', r:15, img:null},
 };
-setupIconLoader(UI.fileMarl, UI.prevMarl, TYPES.MARLB);
-setupIconLoader(UI.fileCup,  UI.prevCup,  TYPES.CUP);
-setupIconLoader(UI.fileTank, UI.prevTank, TYPES.TANK);
-setupIconLoader(UI.fileShee, UI.prevShee, TYPES.SHEE);
-
-/* Mini‑game images */
+// Mini‑game frames
 const SMOKE = {img1:null, img2:null, hasImgs:false};
-setupSmokeLoader(UI.fileSmoke1, UI.prevSmoke1, 'img1');
-setupSmokeLoader(UI.fileSmoke2, UI.prevSmoke2, 'img2');
+// Preload (non‑blocking; falls back if files missing)
+loadImage(PATHS.marl,  img=>{ if(img) TYPES.MARLB.img=img; });
+loadImage(PATHS.cup,   img=>{ if(img) TYPES.CUP.img=img; });
+loadImage(PATHS.tank,  img=>{ if(img) TYPES.TANK.img=img; });
+loadImage(PATHS.shee,  img=>{ if(img) TYPES.SHEE.img=img; });
+loadImage(PATHS.smoke1,img=>{ SMOKE.img1=img; SMOKE.hasImgs=!!(SMOKE.img1&&SMOKE.img2); });
+loadImage(PATHS.smoke2,img=>{ SMOKE.img2=img; SMOKE.hasImgs=!!(SMOKE.img1&&SMOKE.img2); });
+loadImage(PATHS.player,img=>{ if(img) P.photo=img; });
 
-/* Player photo */
-UI.filePlayer.addEventListener('change', function(){
-  const f = this.files?.[0]; if (!f) return;
-  const url = URL.createObjectURL(f);
-  const img = new Image();
-  img.onload = ()=>{ P.photo = img; UI.prevPlayer.textContent=''; UI.prevPlayer.style.backgroundImage=`url(${url})`; UI.prevPlayer.style.backgroundSize='cover'; };
-  img.onerror = ()=>{ P.photo=null; UI.prevPlayer.style.backgroundImage=''; UI.prevPlayer.textContent='🙂'; };
-  img.src = url;
-});
-
-function setupIconLoader(inputEl, prevEl, typeRef){
-  inputEl.addEventListener('change', function(){
-    const f = this.files?.[0]; if (!f) return;
-    const url = URL.createObjectURL(f);
-    const img = new Image();
-    img.onload = ()=>{ typeRef.img = img; prevEl.textContent=''; prevEl.style.backgroundImage=`url(${url})`; prevEl.style.backgroundSize='cover'; };
-    img.onerror = ()=>{ alert('Image failed to load; using emoji.'); typeRef.img=null; prevEl.style.backgroundImage=''; prevEl.textContent = typeRef.emoji; };
-    img.src = url;
-  });
-}
-function setupSmokeLoader(inputEl, prevEl, key){
-  inputEl.addEventListener('change', function(){
-    const f = this.files?.[0]; if (!f) return;
-    const url = URL.createObjectURL(f);
-    const img = new Image();
-    img.onload = ()=>{ SMOKE[key]=img; prevEl.textContent=''; prevEl.style.backgroundImage=`url(${url})`; prevEl.style.backgroundSize='cover'; SMOKE.hasImgs=!!(SMOKE.img1&&SMOKE.img2); };
-    img.onerror = ()=> alert('Image failed to load.');
-    img.src = url;
-  });
-}
-
-/* ==== Loop ==== */
+/* ====== Loop ====== */
 let last = performance.now();
 function loop(now){
   try {
-    const dt = Math.min(0.033,(now-last)/1000); last = now;
+    const dt = Math.min(0.033, (now-last)/1000); last = now;
     update(dt); draw();
   } catch(e){ logErr("Loop error: "+(e&&e.stack?e.stack:e)); }
   requestAnimationFrame(loop);
@@ -347,7 +272,6 @@ function drawGrid(){
     const xS = worldToScreenX(x); CTX.beginPath(); CTX.moveTo(xS, 0); CTX.lineTo(xS, CV.clientHeight); CTX.stroke();
   }
 }
-
 function centerText(t, y, size){ CTX.fillStyle='rgba(255,255,255,.9)'; CTX.font = `bold ${size}px system-ui`; CTX.textAlign='center'; CTX.fillText(t, CV.clientWidth/2, y); CTX.textAlign='left'; }
 
 function drawDisc(wx,wy,r,col){
@@ -363,7 +287,6 @@ function drawPlayer(wx,wy,r,col,photo){
   if (photo){ CTX.drawImage(photo, s.x-rad, s.y-rad, rad*2, rad*2); }
   else { CTX.fillStyle=col; CTX.fillRect(s.x-rad, s.y-rad, rad*2, rad*2); }
   CTX.restore();
-  // Shadow
   CTX.fillStyle='rgba(0,0,0,.25)'; CTX.beginPath(); CTX.ellipse(s.x, s.y+3*s.scale, rad, rad*0.5, 0, 0, Math.PI*2); CTX.fill();
 }
 
@@ -391,7 +314,7 @@ function worldToScreenY(wy){ return (wy - CAM.y) + CV.clientHeight/2; }
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 function rand(min,max){ return Math.random()*(max-min)+min; }
 function randColor(){ const h=Math.floor(Math.random()*360); return `hsl(${h} 85% 60%)`; }
-function randomName(){ const a=['Green','Magic','Turbo','Cat','Neon','Marl','Slime','Ghost','Quick','Pixel']; const b=['Racer','Smoker','Runner','Wizard','Tank','Cup','Sheeba','Ninja','Hustle','Chaser']; return a[Math.floor(Math.random()*a.length)]+b[Math.floor(Math.random()*b.length)]; }
+function randomName(){ const a=['Green','Magic','Turbo','Cat','Neon','Marl','Slime','Ghost','Quick','Pixel']; const b=['Racer','Smoker','Runner','Wizard','Tank','Cup','Sheeba','Ninja','Hustle','Chaser']; return a[Math.floor(Math.random()*a.length)] + b[Math.floor(Math.random()*b.length)]; }
 function getType(it){ return TYPES[it.type] || TYPES.MARLB; }
 
 /* ===== Joystick / keys ===== */
@@ -402,13 +325,28 @@ UI.stick.addEventListener('touchend',   e=>{ const t=findTouch(e,stickTouch); if
 UI.stick.addEventListener('mousedown', e=>{ center=centerOf(UI.stick); const move=ev=>{ const dx=ev.clientX-center.x, dy=ev.clientY-center.y; const maxR=48, d=Math.hypot(dx,dy)||1; const nx=center.x+(d>maxR?dx/d*maxR:dx); const ny=center.y+(d>maxR?dy/d*maxR:dy); moveKnob(nx,ny); P.vx=(nx-center.x)/maxR; P.vy=(ny-center.y)/maxR; }; const up=()=>{ P.vx=P.vy=0; moveKnob(center.x,center.y); window.removeEventListener('mousemove',move); window.removeEventListener('mouseup',up); }; window.addEventListener('mousemove',move); window.addEventListener('mouseup',up); });
 window.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft'||e.key==='a')keyDir.x=-1; if(e.key==='ArrowRight'||e.key==='d')keyDir.x=1; if(e.key==='ArrowUp'||e.key==='w')keyDir.y=-1; if(e.key==='ArrowDown'||e.key==='s')keyDir.y=1; });
 window.addEventListener('keyup',   e=>{ if(['ArrowLeft','a','ArrowRight','d'].includes(e.key))keyDir.x=0; if(['ArrowUp','w','ArrowDown','s'].includes(e.key))keyDir.y=0; });
-function applyJoystick(dt){ if(keyDir.x||keyDir.y){ P.vx=keyDir.x; P.vy=keyDir.y; } const m=Math.hypot(P.vx,P.vy); if(m>1e-3){ P.vx/=Math.max(1,m); P.vy/=Math.max(1,m);} if(!stickTouch && !keyDir.x && !keyDir.y){ const decay=Math.exp(-6*dt); P.vx*=decay; P.vy*=decay; if(Math.abs(P.vx)<0.01)P.vx=0; if(Math.abs(P.vy)<0.01)P.vy=0; } }
+function applyJoystick(dt){
+  if(keyDir.x||keyDir.y){ P.vx=keyDir.x; P.vy=keyDir.y; }
+  const m=Math.hypot(P.vx,P.vy); if(m>1e-3){ P.vx/=Math.max(1,m); P.vy/=Math.max(1,m); }
+  if(!stickTouch && !keyDir.x && !keyDir.y){
+    const decay=Math.exp(-6*dt); P.vx*=decay; P.vy*=decay;
+    if(Math.abs(P.vx)<0.01)P.vx=0; if(Math.abs(P.vy)<0.01)P.vy=0;
+  }
+}
 function centerOf(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; }
 function moveKnob(x,y){ if(!center) center=centerOf(UI.stick); UI.knob.style.transform=`translate(${x-center.x}px, ${y-center.y}px)`; }
 function findTouch(e,id){ for(const t of e.changedTouches) if(t.identifier===id) return t; return null; }
 
 /* ===== Items & Effects ===== */
-function spawnItem(){ const types=['MARLB','CUP','SHEE','TANK']; const weights=[0.5,0.25,0.18,0.07]; const type=pickWeighted(types,weights); const id=FB.enabled?FB.db.ref().push().key:'loc-'+Math.random().toString(36).slice(2); const it={id,type,x:rand(0,WORLD.w),y:rand(0,WORLD.h),claimedBy:null}; ITEMS.set(it.id,it); if(FB.enabled){ FB.db.ref(`lationcup/rooms/default/items/${it.id}`).set(it).catch(()=>{});} }
+function spawnItem(){
+  const types=['MARLB','CUP','SHEE','TANK'];
+  const weights=[0.5,0.25,0.18,0.07];
+  const type=pickWeighted(types,weights);
+  const id=FB.enabled?FB.db.ref().push().key:'loc-'+Math.random().toString(36).slice(2);
+  const it={id,type,x:rand(0,WORLD.w),y:rand(0,WORLD.h),claimedBy:null};
+  ITEMS.set(it.id,it);
+  if(FB.enabled){ FB.db.ref(`lationcup/rooms/default/items/${it.id}`).set(it).catch(()=>{}); }
+}
 function pickWeighted(arr,w){ const s=w.reduce((a,b)=>a+b,0); let r=Math.random()*s; for(let i=0;i<arr.length;i++){ r-=w[i]; if(r<=0) return arr[i]; } return arr[0]; }
 
 function claimItem(it){
@@ -425,12 +363,11 @@ function claimItem(it){
 }
 
 function flash(color){
-  // simple rim flash on canvas
   CV.style.boxShadow = `0 0 0 5px ${color}66 inset`;
   setTimeout(()=> CV.style.boxShadow='',150);
 }
 
-/* ===== Mini‑game (6s, with momentum) ===== */
+/* ===== Mini‑game (6s, momentum) ===== */
 const Mini = {active:false, taps:0, time:6, progress:0, puffs:0, toggle:false};
 function startMiniGame(){
   Mini.active=true; Mini.taps=0; Mini.time=6; Mini.progress=0; Mini.puffs=0; Mini.toggle=false;
@@ -447,7 +384,7 @@ function startMiniGame(){
     if (Mini.progress >= 1){
       Mini.puffs++;
       UI.puffCounter.textContent = `Puffs: ${Mini.puffs}`;
-      Mini.progress = 0.6; // keep momentum
+      Mini.progress = 0.6;
     }
     UI.bar.style.width = (Mini.progress*100)+'%';
   };
@@ -477,7 +414,7 @@ function startMiniGame(){
   });
 }
 function setSprite(useSecond){
-  if (SMOKE.hasImgs){
+  if (SMOKE.img1 && SMOKE.img2){
     const img = useSecond ? SMOKE.img2 : SMOKE.img1;
     UI.smokeSprite.textContent=''; UI.smokeSprite.style.backgroundImage=''; UI.smokeSprite.innerHTML='';
     const el = new Image(); el.src = img.src; el.style.width='100%'; el.style.height='100%'; el.style.objectFit='cover';
@@ -497,13 +434,11 @@ function localResolve(it){
   if (FB.enabled){ FB.db.ref(`lationcup/rooms/default/items/${it.id}`).remove().catch(()=>{}); }
 }
 
-/* ===== Multiplayer plumbing ===== */
+/* ===== Multiplayer (optional) ===== */
 function subPlayers(){ if(!FB.enabled)return;
   FB.db.ref('lationcup/rooms/default/players').on('value', snap=>{
     const v=snap.val()||{}; OTHERS.clear();
     for (const k in v) if (k!==FB.uid) OTHERS.set(k,v[k]);
-    const arr=Object.values(v).sort((a,b)=>(b.score||0)-(a.score||0)||(b.ts||0)-(a.ts||0));
-    UI.lb.innerHTML = arr.map((p,i)=> `<div>${i+1}. <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color||'#fff'}"></span> ${escapeHtml(p.name||'Anon')} — 🟥 ${p.score||0}</div>`).join('') || '(waiting for players...)';
   });
 }
 function subItems(){ if(!FB.enabled)return;
@@ -531,6 +466,12 @@ function resetGame(){
   }
 }
 function logErr(msg){ const box=document.getElementById('err'); box.style.display='block'; box.textContent=String(msg); }
+
+/* ===== Helpers ===== */
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function rand(min,max){ return Math.random()*(max-min)+min; }
+function randColor(){ const h=Math.floor(Math.random()*360); return `hsl(${h} 85% 60%)`; }
+function randomName(){ const a=['Green','Magic','Turbo','Cat','Neon','Marl','Slime','Ghost','Quick','Pixel']; const b=['Racer','Smoker','Runner','Wizard','Tank','Cup','Sheeba','Ninja','Hustle','Chaser']; return a[Math.floor(Math.random()*a.length)] + b[Math.floor(Math.random()*b.length)]; }
 </script>
 </body>
 </html>
