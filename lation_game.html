@@ -22,13 +22,11 @@
   #puffCounter{font-weight:700;font-size:18px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.2)}
   #miniClock{font-size:18px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.2)}
   #smokeSprite{width:190px;height:190px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:96px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.2);overflow:hidden}
-  /* 2x bigger + Finnish text */
   #tapBtn{font-size:28px;padding:24px 30px;border-radius:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28)}
   #meter{width:300px;height:20px;border:1px solid rgba(255,255,255,.35);border-radius:12px;overflow:hidden;background:rgba(0,0,0,.25)}
   #bar{height:100%;width:0;background:linear-gradient(90deg,#18ff9b,#66ffd6)}
   #msg{font-size:14px;opacity:.9}
   #err{position:fixed;right:8px;bottom:8px;max-width:70vw;font:12px/1.3 ui-monospace,Menlo,monospace;background:#280b0b;color:#ffdede;border:1px solid #ff8a80;border-radius:8px;padding:8px;display:none;z-index:999}
-  /* Leaderboard overlay (small, non-blocking) */
   #lb{position:fixed;top:52px;right:10px;z-index:22;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 10px;font-size:13px;max-width:46vw;min-width:160px}
   #lb b{font-size:12px;opacity:.85}
   #lb .row{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:2px 0}
@@ -48,7 +46,6 @@
   <span id="hud">⏱ 180 • 🟥 0 • ⚡ 1.0x</span>
 </div>
 
-<!-- Mini-game -->
 <div id="mini">
   <div id="miniInner">
     <div id="miniHeader">
@@ -62,10 +59,8 @@
   </div>
 </div>
 
-<!-- Joystick -->
 <div id="stick"><div id="knob"></div></div>
 
-<!-- Tiny live leaderboard -->
 <div id="lb"><b>🏆 Leaderboard</b><div id="lbList">(empty)</div></div>
 
 <div id="err"></div>
@@ -144,15 +139,17 @@ const P = {x:WORLD.w/2, y:WORLD.h/2, r:16, color:randColor(), vx:0, vy:0, photo:
 const CAM = {x:P.x, y:P.y};
 const ITEMS = new Map();
 const OTHERS = new Map(); // uid -> {x,y,score,ts,color,name,ready}
+const MY_CLAIM_PENDING = new Set();   // ids we tried to claim
+const MY_CLAIM_RESOLVED = new Set();  // ids we already resolved (avoid double)
 
 /* ====== Images (from repo root) with fallbacks ====== */
 const PATHS = {
-  marl:  'mallu.png',   // from your repo
+  marl:  'mallu.png',   // in your repo
   cup:   'cup.png',
   tank:  'tank.png',
   shee:  'sheeba.png',
   smoke1:'smoke1.png',
-  smoke2:'player2.png', // using your file as second frame
+  smoke2:'player2.png', // second frame
   player:'player.png'
 };
 function loadImage(path, onok){ const img=new Image(); img.onload=()=>onok&&onok(img); img.onerror=()=>onok&&onok(null); img.src=path; }
@@ -215,13 +212,11 @@ function subState(){
       if (G.state!=='idle'){ G.state='idle'; }
       return;
     }
-    // start synchronized by startAt timestamp
     const elapsed = Math.max(0, (Date.now() - (v.startAt||Date.now()))/1000);
     startPlayWithRemaining(Math.max(0, 180 - elapsed));
   });
 }
 
-// whenever players list changes, update leaderboard and, if all ready, trigger start
 function subPlayers(){ if(!FB.enabled)return;
   FB.db.ref(`lationcup/rooms/${ROOM}/players`).on('value', async snap=>{
     const v=snap.val()||{};
@@ -234,19 +229,23 @@ function subPlayers(){ if(!FB.enabled)return;
     }
     renderLeaderboard(v);
 
-    // If everyone is ready and not started yet, flip the room state to playing (any client can)
     if (count>0 && allReady){
       const sRef = FB.db.ref(`lationcup/rooms/${ROOM}/state`);
       await sRef.transaction(cur=>{
-        if (cur && cur.phase==='playing') return; // no change
+        if (cur && cur.phase==='playing') return; 
         return {phase:'playing', startAt: Date.now()};
+      });
+      // reset ready flags for next round
+      FB.db.ref(`lationcup/rooms/${ROOM}/players`).once('value').then(ss=>{
+        const val = ss.val()||{};
+        for (const k in val) FB.db.ref(`lationcup/rooms/${ROOM}/players/${k}/ready`).set(false);
       });
     }
   });
 }
 
 function renderLeaderboard(playersObj){
-  const arr = Object.values(playersObj||{}).map(p=>({n:p.name||'Anon', s:p.score||0, c:p.color||'#fff'}));
+  const arr = Object.values(playersObj||{}).map(p=>({n:p.name||'Anon', s:p.score||0}));
   arr.sort((a,b)=>b.s-a.s);
   UI.lbList.innerHTML = arr.map((p,i)=>`
     <div class="row">
@@ -262,10 +261,7 @@ function startPlayWithRemaining(rem){
   G.time = rem;
 }
 
-function resetGameLocalStart(){ // single-player
-  resetGame(); 
-  G.state='play';
-}
+function resetGameLocalStart(){ resetGame(); G.state='play'; }
 
 /* ====== Items & Effects ====== */
 function spawnItem(){
@@ -280,15 +276,27 @@ function spawnItem(){
 function pickWeighted(arr,w){ const s=w.reduce((a,b)=>a+b,0); let r=Math.random()*s; for(let i=0;i<arr.length;i++){ r-=w[i]; if(r<=0) return arr[i]; } return arr[0]; }
 
 function claimItem(it){
+  // mark as pending in case callback doesn't fire
+  MY_CLAIM_PENDING.add(it.id);
+
   if (!FB.enabled){ localResolve(it); return; }
+
   const ref=FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`);
   ref.transaction(cur=>{
-    if(!cur||cur.claimedBy) return cur||it;
-    cur.claimedBy=FB.uid; return cur;
+    if(!cur || cur.claimedBy) return cur || it;
+    cur.claimedBy = FB.uid;
+    return cur;
   }, (err,committed,snap)=>{
-    if(err||!committed) return;
-    ITEMS.set(it.id,snap.val());
-    localResolve(snap.val(),true);
+    if(err || !committed) return;
+    const claimed = snap.val();
+    ITEMS.set(it.id, claimed);
+    // primary resolve path
+    if (!MY_CLAIM_RESOLVED.has(it.id)) {
+      localResolve(claimed, true);
+      MY_CLAIM_RESOLVED.add(it.id);
+    }
+    // remove from DB
+    FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).remove().catch(e=>toast('remove failed: '+e));
   });
 }
 
@@ -375,18 +383,15 @@ function draw(){
 
   drawGrid();
 
-  // items depth sort
   const list = Array.from(ITEMS.values()).filter(i=>!i.claimedBy).sort((a,b)=>a.y-b.y);
   for (const it of list) drawItem(it);
 
-  // other players (with icon + name)
   for (const g of OTHERS.values()){
     if (Date.now()-g.ts>4000) continue;
     drawPlayer(g.x,g.y,16,g.color, DEFAULT_AVATAR);
     drawName(g.name || 'Anon', g.x, g.y, 16);
   }
 
-  // self
   drawPlayer(P.x,P.y,16,P.color,P.photo||DEFAULT_AVATAR);
   drawName(P.name||'Me', P.x, P.y, 16);
 
@@ -415,28 +420,20 @@ function drawDisc(wx,wy,r,col){
 function drawPlayer(wx,wy,r,col,photo){
   const s = worldToScreen(wx,wy);
   const rad = r*s.scale;
-  // shadow
   CTX.fillStyle='rgba(0,0,0,.25)'; CTX.beginPath(); CTX.ellipse(s.x, s.y+3*s.scale, rad, rad*0.5, 0, 0, Math.PI*2); CTX.fill();
-  // avatar (photo) or color
   CTX.save();
   CTX.beginPath(); CTX.arc(s.x,s.y,rad,0,Math.PI*2); CTX.clip();
   if (photo){ CTX.drawImage(photo, s.x-rad, s.y-rad, rad*2, rad*2); }
   else { CTX.fillStyle=col; CTX.fillRect(s.x-rad, s.y-rad, rad*2, rad*2); }
   CTX.restore();
-  // subtle ring
   CTX.strokeStyle='rgba(255,255,255,.25)'; CTX.lineWidth=2; CTX.beginPath(); CTX.arc(s.x,s.y,rad-1,0,Math.PI*2); CTX.stroke();
 }
 function drawName(name, wx, wy, r){
   const s = worldToScreen(wx,wy);
   const y = s.y + (r*s.scale) + 14;
-  CTX.font='600 13px system-ui';
-  CTX.textAlign='center';
-  // shadow
-  CTX.fillStyle='rgba(0,0,0,.55)';
-  CTX.fillText(name, s.x, y+1);
-  // text
-  CTX.fillStyle='rgba(255,255,255,.95)';
-  CTX.fillText(name, s.x, y);
+  CTX.font='600 13px system-ui'; CTX.textAlign='center';
+  CTX.fillStyle='rgba(0,0,0,.55)'; CTX.fillText(name, s.x, y+1);
+  CTX.fillStyle='rgba(255,255,255,.95)'; CTX.fillText(name, s.x, y);
 }
 
 function drawItem(it){
@@ -465,6 +462,7 @@ function rand(min,max){ return Math.random()*(max-min)+min; }
 function randColor(){ const h=Math.floor(Math.random()*360); return `hsl(${h} 85% 60%)`; }
 function randomName(){ const a=['Green','Magic','Turbo','Cat','Neon','Marl','Slime','Ghost','Quick','Pixel']; const b=['Racer','Smoker','Runner','Wizard','Tank','Cup','Sheeba','Ninja','Hustle','Chaser']; return a[Math.floor(Math.random()*a.length)] + b[Math.floor(Math.random()*b.length)]; }
 function getType(it){ return TYPES[it.type] || TYPES.MARLB; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
 /* ===== Input (joystick + keys) ===== */
 let stickTouch=null, center=null, keyDir={x:0,y:0};
@@ -489,19 +487,43 @@ function findTouch(e,id){ for(const t of e.changedTouches) if(t.identifier===id)
 /* ===== Multiplayer plumbing ===== */
 function subItems(){ if(!FB.enabled)return;
   FB.db.ref(`lationcup/rooms/${ROOM}/items`).on('value', snap=>{
-    const v=snap.val()||{}; ITEMS.clear(); for(const id in v) ITEMS.set(id,v[id]);
+    const v=snap.val()||{};
+    ITEMS.clear();
+    for(const id in v){
+      const it = v[id];
+      ITEMS.set(id, it);
+
+      // SAFETY NET: if this item is marked as claimed by me but not resolved yet, resolve now
+      if (it.claimedBy && FB.uid && it.claimedBy === FB.uid && MY_CLAIM_PENDING.has(id) && !MY_CLAIM_RESOLVED.has(id)) {
+        MY_CLAIM_RESOLVED.add(id);
+        localResolve(it, true);
+        FB.db.ref(`lationcup/rooms/${ROOM}/items/${id}`).remove().catch(e=>toast('remove (net) failed: '+e));
+      }
+    }
   });
 }
 function pushPlayer(){ if(!FB.enabled||!FB.uid)return; if(G.state!=='play'&&G.state!=='over')return;
   FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`).update({name:P.name, x:Math.round(P.x), y:Math.round(P.y), score:G.score, ts:Date.now(), color:P.color}).catch(err=>toast('push player failed: '+err));
 }
 
+/* ===== Resolve items ===== */
+function localResolve(it, fromServer){
+  try{
+    if (it.type==='CUP'){ G.mult = Math.min(3, G.mult+0.4); flash('#2e7d32'); }
+    else if (it.type==='TANK'){ G.mult = Math.min(4, G.mult+1.0); flash('#18ff9b'); }
+    else if (it.type==='SHEE'){ G.mult = Math.max(0.5, G.mult-0.6); flash('#aaaaaa'); }
+    else if (it.type==='MARLB'){ startMiniGame().then(()=>{}); }
+  }catch(e){ toast('resolve error: '+e); }
+
+  ITEMS.delete(it.id);
+}
+
 /* ===== Reset ===== */
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 function resetGame(){
   G.time=180; G.score=0; G.mult=1;
   P.x=WORLD.w/2; P.y=WORLD.h/2; P.vx=P.vy=0;
-  ITEMS.clear(); for (let i=0;i<25;i++) spawnItem();
+  ITEMS.clear(); MY_CLAIM_PENDING.clear(); MY_CLAIM_RESOLVED.clear();
+  for (let i=0;i<25;i++) spawnItem();
   if (FB.enabled){
     FB.db.ref(`lationcup/rooms/${ROOM}/items`).once('value').then(s=>{
       if (!s.exists()){
