@@ -7,19 +7,15 @@
 <style>
   :root { --ui-bg: rgba(0,0,0,.35); --ui-bd: rgba(255,255,255,.2); }
   html,body{margin:0;height:100%;background:#08130e;color:#e9ffee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overscroll-behavior:none}
-  /* Fullscreen canvas */
   #cv{position:fixed;inset:0;display:block;width:100vw;height:100dvh;background:linear-gradient(#071f16,#0a2d1f)}
-  /* Top HUD bar */
   #topbar{position:fixed;left:0;right:0;top:0;padding:8px 10px;display:flex;gap:8px;align-items:center;justify-content:flex-start;background:var(--ui-bg);backdrop-filter:blur(6px);border-bottom:1px solid var(--ui-bd);z-index:20}
   #title{font-weight:700}
   #name{min-width:110px}
   input,button{font-size:16px;border-radius:10px;border:1px solid var(--ui-bd);background:rgba(255,255,255,.08);color:#e9ffee;padding:8px 10px}
   button{cursor:pointer}
   #hud{margin-left:auto;font-variant-numeric:tabular-nums}
-  /* Virtual joystick */
   #stick{position:fixed;left:14px;bottom:14px;width:120px;height:120px;border-radius:60px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);z-index:15;touch-action:none}
   #knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25)}
-  /* Mini-game overlay */
   #mini{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.55);z-index:30;touch-action:none}
   #miniInner{display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);padding:14px 16px;border-radius:14px}
   #miniHeader{display:flex;gap:14px;align-items:center;justify-content:center}
@@ -30,17 +26,13 @@
   #meter{width:260px;height:18px;border:1px solid rgba(255,255,255,.35);border-radius:12px;overflow:hidden;background:rgba(0,0,0,.25)}
   #bar{height:100%;width:0;background:linear-gradient(90deg,#18ff9b,#66ffd6)}
   #msg{font-size:13px;opacity:.9}
-  /* Error toast */
   #err{position:fixed;right:8px;bottom:8px;max-width:70vw;font:12px/1.3 ui-monospace,Menlo,monospace;background:#280b0b;color:#ffdede;border:1px solid #ff8a80;border-radius:8px;padding:8px;display:none;z-index:999}
-  @media (max-width:480px){
-    #title{display:none}
-  }
+  @media (max-width:480px){ #title{display:none} }
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
 
-<!-- Top bar -->
 <div id="topbar">
   <div id="title">🧪 Lation‑Cup</div>
   <input id="name" placeholder="Your name">
@@ -49,7 +41,6 @@
   <span id="hud">⏱ 180 • 🟥 0 • ⚡ 1.0x</span>
 </div>
 
-<!-- Mini-game -->
 <div id="mini">
   <div id="miniInner">
     <div id="miniHeader">
@@ -63,26 +54,19 @@
   </div>
 </div>
 
-<!-- Joystick -->
 <div id="stick"><div id="knob"></div></div>
 
 <div id="err"></div>
 
-<!-- Firebase (optional multiplayer: Auth+DB only) -->
+<!-- Firebase compat SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <script>
-/*** ====== OPTIONAL MULTIPLAYER VIA FIREBASE ======
-  Paste your config below to enable live players/items/leaderboard.
-*****************************************************/
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+/*** ===== FIREBASE SETUP + ROOM ===== ***/
+const ROOM = new URLSearchParams(location.search).get('room') || 'default';
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCtrAUvtKZrPtWqT2r4L52jxzms-Xhc9JQ",
   authDomain: "lation-cb350.firebaseapp.com",
@@ -93,18 +77,19 @@ const firebaseConfig = {
   appId: "1:586891618356:web:067b08669dd69725e54261"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
 let FB = {enabled:false, app:null, db:null, auth:null, uid:null};
-try {
-  if (firebaseConfig.apiKey) {
-    FB.app = firebase.initializeApp(firebaseConfig);
-    FB.db = firebase.database();
-    FB.auth = firebase.auth();
-    FB.enabled = true;
-  }
-} catch(e){ logErr("Firebase init failed: "+e); }
+function toast(s){ const el=document.getElementById('err'); el.style.display='block'; el.textContent=s; console.log('[LationCup]', s); }
 
+try{
+  FB.app = firebase.initializeApp(firebaseConfig);
+  FB.db  = firebase.database();
+  FB.auth= firebase.auth();
+  FB.enabled = true;
+  toast('Firebase initialized ✓ (room: '+ROOM+')');
+}catch(e){ toast('Firebase init failed: '+e); FB.enabled=false; }
+</script>
+
+<script>
 /* =================== Core =================== */
 const CV = document.getElementById('cv');
 const CTX = CV.getContext('2d');
@@ -145,14 +130,17 @@ UI.join.onclick = async () => {
     try {
       await FB.auth.signInAnonymously();
       FB.uid = FB.auth.currentUser.uid;
-      const pRef = FB.db.ref(`lationcup/rooms/default/players/${FB.uid}`);
+      const pRef = FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`);
       pRef.onDisconnect().remove();
       await pRef.set({name:UI.name.value.trim(), x:P.x, y:P.y, score:0, ts:Date.now(), color:P.color});
       subPlayers(); subItems();
+      toast('Joined room ✓');
     } catch(e){
-      logErr("Firebase sign‑in failed: "+e);
+      toast("Firebase sign‑in failed: "+e);
       alert("Firebase sign‑in failed; continuing single‑player.");
     }
+  } else {
+    toast('Single‑player mode (Firebase disabled)');
   }
   UI.join.disabled = true;
 };
@@ -160,38 +148,30 @@ UI.start.onclick = () => { resetGame(); G.state='play'; UI.start.disabled = true
 
 /* ====== World / Player ====== */
 const WORLD = {w:2000,h:2000};
-const G = {state:'idle', time:180, score:0, mult:1, speedBase:140, t:0}; // 3 minutes
+const G = {state:'idle', time:180, score:0, mult:1, speedBase:140, t:0};
 const P = {x:WORLD.w/2, y:WORLD.h/2, r:16, color:randColor(), vx:0, vy:0, photo:null};
 const CAM = {x:P.x, y:P.y};
 const ITEMS = new Map();
 const OTHERS = new Map();
 
-/* ====== Images from /images with fallbacks ====== */
+/* ====== Images (from repo root) with fallbacks ====== */
 const PATHS = {
-  marl:  'marlboro.png',
+  marl:  'mallu.png',   // matches your repo
   cup:   'cup.png',
   tank:  'tank.png',
   shee:  'sheeba.png',
   smoke1:'smoke1.png',
-  smoke2:'player2.png',
+  smoke2:'player2.png', // your second frame file
   player:'player.png'
 };
-function loadImage(path, onok){
-  const img = new Image();
-  img.onload = ()=> onok && onok(img);
-  img.onerror = ()=> onok && onok(null);
-  img.src = path;
-}
-// Types & emojis
+function loadImage(path, onok){ const img=new Image(); img.onload=()=>onok&&onok(img); img.onerror=()=>onok&&onok(null); img.src=path; }
 const TYPES = {
-  MARLB: {emoji:'🟥', r:16, img:null},
-  CUP:   {emoji:'🥤', r:14, img:null},
-  TANK:  {emoji:'🛢️', r:18, img:null},
-  SHEE:  {emoji:'🥫', r:15, img:null},
+  MARLB:{emoji:'🟥', r:16, img:null},
+  CUP:{emoji:'🥤', r:14, img:null},
+  TANK:{emoji:'🛢️', r:18, img:null},
+  SHEE:{emoji:'🥫', r:15, img:null},
 };
-// Mini‑game frames
-const SMOKE = {img1:null, img2:null, hasImgs:false};
-// Preload (non‑blocking; falls back if files missing)
+const SMOKE = {img1:null,img2:null,hasImgs:false};
 loadImage(PATHS.marl,  img=>{ if(img) TYPES.MARLB.img=img; });
 loadImage(PATHS.cup,   img=>{ if(img) TYPES.CUP.img=img; });
 loadImage(PATHS.tank,  img=>{ if(img) TYPES.TANK.img=img; });
@@ -203,10 +183,8 @@ loadImage(PATHS.player,img=>{ if(img) P.photo=img; });
 /* ====== Loop ====== */
 let last = performance.now();
 function loop(now){
-  try {
-    const dt = Math.min(0.033, (now-last)/1000); last = now;
-    update(dt); draw();
-  } catch(e){ logErr("Loop error: "+(e&&e.stack?e.stack:e)); }
+  try { const dt=Math.min(0.033,(now-last)/1000); last=now; update(dt); draw(); }
+  catch(e){ logErr("Loop error: "+(e&&e.stack?e.stack:e)); }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
@@ -354,13 +332,13 @@ function spawnItem(){
   const id=FB.enabled?FB.db.ref().push().key:'loc-'+Math.random().toString(36).slice(2);
   const it={id,type,x:rand(0,WORLD.w),y:rand(0,WORLD.h),claimedBy:null};
   ITEMS.set(it.id,it);
-  if(FB.enabled){ FB.db.ref(`lationcup/rooms/default/items/${it.id}`).set(it).catch(()=>{}); }
+  if(FB.enabled){ FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).set(it).catch(err=>toast('spawn set failed: '+err)); }
 }
 function pickWeighted(arr,w){ const s=w.reduce((a,b)=>a+b,0); let r=Math.random()*s; for(let i=0;i<arr.length;i++){ r-=w[i]; if(r<=0) return arr[i]; } return arr[0]; }
 
 function claimItem(it){
   if (!FB.enabled){ localResolve(it); return; }
-  const ref=FB.db.ref(`lationcup/rooms/default/items/${it.id}`);
+  const ref=FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`);
   ref.transaction(cur=>{
     if(!cur||cur.claimedBy) return cur||it;
     cur.claimedBy=FB.uid; return cur;
@@ -371,66 +349,35 @@ function claimItem(it){
   });
 }
 
-function flash(color){
-  CV.style.boxShadow = `0 0 0 5px ${color}66 inset`;
-  setTimeout(()=> CV.style.boxShadow='',150);
-}
+function flash(color){ CV.style.boxShadow=`0 0 0 5px ${color}66 inset`; setTimeout(()=> CV.style.boxShadow='',150); }
 
-/* ===== Mini‑game (6s, momentum) ===== */
+/* ===== Mini‑game (6s) ===== */
 const Mini = {active:false, taps:0, time:6, progress:0, puffs:0, toggle:false};
 function startMiniGame(){
   Mini.active=true; Mini.taps=0; Mini.time=6; Mini.progress=0; Mini.puffs=0; Mini.toggle=false;
   UI.mini.style.display='flex'; UI.bar.style.width='0%'; UI.puffCounter.textContent='Puffs: 0'; UI.miniClock.textContent='6s';
   setSprite(false);
-
-  const decayPerSec = 0.18;
-  const gainPerTap  = 0.09;
-  let lastTs = performance.now();
-
-  const onTap = (ev)=>{ ev&&ev.preventDefault(); if(!Mini.active)return;
+  const decayPerSec=0.18, gainPerTap=0.09; let lastTs=performance.now();
+  const onTap=(ev)=>{ ev&&ev.preventDefault(); if(!Mini.active)return;
     Mini.taps++; Mini.toggle=!Mini.toggle; setSprite(Mini.toggle);
-    Mini.progress = Math.min(1, Mini.progress + gainPerTap);
-    if (Mini.progress >= 1){
-      Mini.puffs++;
-      UI.puffCounter.textContent = `Puffs: ${Mini.puffs}`;
-      Mini.progress = 0.6;
-    }
-    UI.bar.style.width = (Mini.progress*100)+'%';
+    Mini.progress=Math.min(1, Mini.progress+gainPerTap);
+    if(Mini.progress>=1){ Mini.puffs++; UI.puffCounter.textContent=`Puffs: ${Mini.puffs}`; Mini.progress=0.6; }
+    UI.bar.style.width=(Mini.progress*100)+'%';
   };
-  UI.tapBtn.onpointerdown = onTap;
-
+  UI.tapBtn.onpointerdown=onTap;
   return new Promise(resolve=>{
-    const secIv = setInterval(()=>{
-      Mini.time -= 1; UI.miniClock.textContent = `${Math.max(0,Math.ceil(Mini.time))}s`;
-      if (Mini.time<=0){ clearInterval(secIv); cancelAnimationFrame(anim); finish(); }
-    },1000);
-
-    function tick(){
-      if (!Mini.active) return;
-      const now = performance.now();
-      const dt = Math.min(0.05, (now - lastTs)/1000); lastTs = now;
-      Mini.progress = Math.max(0, Mini.progress - decayPerSec*dt);
-      UI.bar.style.width = (Mini.progress*100)+'%';
-      anim = requestAnimationFrame(tick);
-    }
-    let anim = requestAnimationFrame(tick);
-
-    function finish(){
-      Mini.active=false; UI.mini.style.display='none';
-      G.score += Math.round(Mini.puffs * G.mult);
-      resolve(Mini.puffs);
-    }
+    const secIv=setInterval(()=>{ Mini.time-=1; UI.miniClock.textContent=`${Math.max(0,Math.ceil(Mini.time))}s`; if(Mini.time<=0){ clearInterval(secIv); cancelAnimationFrame(anim); finish(); } },1000);
+    function tick(){ if(!Mini.active)return; const now=performance.now(); const dt=Math.min(0.05,(now-lastTs)/1000); lastTs=now; Mini.progress=Math.max(0, Mini.progress - decayPerSec*dt); UI.bar.style.width=(Mini.progress*100)+'%'; anim=requestAnimationFrame(tick); }
+    let anim=requestAnimationFrame(tick);
+    function finish(){ Mini.active=false; UI.mini.style.display='none'; G.score += Math.round(Mini.puffs * G.mult); resolve(Mini.puffs); }
   });
 }
 function setSprite(useSecond){
   if (SMOKE.img1 && SMOKE.img2){
-    const img = useSecond ? SMOKE.img2 : SMOKE.img1;
+    const img=useSecond?SMOKE.img2:SMOKE.img1;
     UI.smokeSprite.textContent=''; UI.smokeSprite.style.backgroundImage=''; UI.smokeSprite.innerHTML='';
-    const el = new Image(); el.src = img.src; el.style.width='100%'; el.style.height='100%'; el.style.objectFit='cover';
-    UI.smokeSprite.appendChild(el);
-  } else {
-    UI.smokeSprite.style.backgroundImage=''; UI.smokeSprite.textContent = useSecond ? '😮‍💨' : '🚬';
-  }
+    const el=new Image(); el.src=img.src; el.style.width='100%'; el.style.height='100%'; el.style.objectFit='cover'; UI.smokeSprite.appendChild(el);
+  } else { UI.smokeSprite.style.backgroundImage=''; UI.smokeSprite.textContent = useSecond ? '😮‍💨' : '🚬'; }
 }
 
 /* ===== Resolve items ===== */
@@ -440,23 +387,23 @@ function localResolve(it){
   else if (it.type==='SHEE'){ G.mult = Math.max(0.5, G.mult-0.6); flash('#aaaaaa'); }
   else if (it.type==='MARLB'){ startMiniGame().then(()=>{}); }
   ITEMS.delete(it.id);
-  if (FB.enabled){ FB.db.ref(`lationcup/rooms/default/items/${it.id}`).remove().catch(()=>{}); }
+  if (FB.enabled){ FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).remove().catch(err=>toast('remove failed: '+err)); }
 }
 
 /* ===== Multiplayer (optional) ===== */
 function subPlayers(){ if(!FB.enabled)return;
-  FB.db.ref('lationcup/rooms/default/players').on('value', snap=>{
+  FB.db.ref(`lationcup/rooms/${ROOM}/players`).on('value', snap=>{
     const v=snap.val()||{}; OTHERS.clear();
     for (const k in v) if (k!==FB.uid) OTHERS.set(k,v[k]);
   });
 }
 function subItems(){ if(!FB.enabled)return;
-  FB.db.ref('lationcup/rooms/default/items').on('value', snap=>{
+  FB.db.ref(`lationcup/rooms/${ROOM}/items`).on('value', snap=>{
     const v=snap.val()||{}; ITEMS.clear(); for(const id in v) ITEMS.set(id,v[id]);
   });
 }
 function pushPlayer(){ if(!FB.enabled||!FB.uid)return; if(G.state!=='play'&&G.state!=='over')return;
-  FB.db.ref(`lationcup/rooms/default/players/${FB.uid}`).update({name:UI.name.value.trim(), x:Math.round(P.x), y:Math.round(P.y), score:G.score, ts:Date.now(), color:P.color}).catch(()=>{});
+  FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`).update({name:UI.name.value.trim(), x:Math.round(P.x), y:Math.round(P.y), score:G.score, ts:Date.now(), color:P.color}).catch(err=>toast('push player failed: '+err));
 }
 
 /* ===== Utils & reset ===== */
@@ -466,10 +413,10 @@ function resetGame(){
   P.x=WORLD.w/2; P.y=WORLD.h/2; P.vx=P.vy=0;
   ITEMS.clear(); for (let i=0;i<25;i++) spawnItem();
   if (FB.enabled){
-    FB.db.ref('lationcup/rooms/default/items').once('value').then(s=>{
+    FB.db.ref(`lationcup/rooms/${ROOM}/items`).once('value').then(s=>{
       if (!s.exists()){
         const batch={}; for (const it of ITEMS.values()) batch[it.id]=it;
-        FB.db.ref('lationcup/rooms/default/items').set(batch).catch(()=>{});
+        FB.db.ref(`lationcup/rooms/${ROOM}/items`).set(batch).catch(err=>toast('seed failed: '+err));
       }
     });
   }
@@ -481,6 +428,7 @@ function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 function rand(min,max){ return Math.random()*(max-min)+min; }
 function randColor(){ const h=Math.floor(Math.random()*360); return `hsl(${h} 85% 60%)`; }
 function randomName(){ const a=['Green','Magic','Turbo','Cat','Neon','Marl','Slime','Ghost','Quick','Pixel']; const b=['Racer','Smoker','Runner','Wizard','Tank','Cup','Sheeba','Ninja','Hustle','Chaser']; return a[Math.floor(Math.random()*a.length)] + b[Math.floor(Math.random()*b.length)]; }
+function getType(it){ return TYPES[it.type] || TYPES.MARLB; }
 </script>
 </body>
 </html>
