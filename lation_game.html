@@ -410,7 +410,7 @@
   addEventListener('keyup',e=>{ if(['ArrowLeft','a','ArrowRight','d'].includes(e.key))keyDir.x=0; if(['ArrowUp','w','ArrowDown','s'].includes(e.key))keyDir.y=0; });
 
   /* Itemit + vaikutukset */
-  function spawnItem(){ const types=['MARLB','CUP','SHEE','TANK'], w=[0.5,0.25,0.18,0.07]; const type=pickWeighted(types,w); const id=FB.enabled?FB.db.ref().push().key:'loc-'+Math.random().toString(36).slice(2); const it={id,type,x:rand(40,WORLD.w-40),y:rand(40,WORLD.h-40),claimedBy:null}; ITEMS.set(it.id,it); if(FB.enabled){ FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).set(it).catch(()=>{}); } }
+  function spawnItem(){ const types=['MARLB','CUP','SHEE','TANK'], w=[0.15,0.2,0.15,0.05]; const type=pickWeighted(types,w); const id=FB.enabled?FB.db.ref().push().key:'loc-'+Math.random().toString(36).slice(2); const it={id,type,x:rand(40,WORLD.w-40),y:rand(40,WORLD.h-40),claimedBy:null}; ITEMS.set(it.id,it); if(FB.enabled){ FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).set(it).catch(()=>{}); } }
   function pickWeighted(arr,w){ const s=w.reduce((a,b)=>a+b,0); let r=Math.random()*s; for(let i=0;i<arr.length;i++){ r-=w[i]; if(r<=0) return arr[i]; } return arr[0]; }
   function claimItem(it){
     if(!FB.enabled){ localResolve(it); return; }
