@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="fi">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -14,7 +14,7 @@
   input,button{font-size:16px;border-radius:10px;border:1px solid var(--ui-bd);background:rgba(255,255,255,.08);color:#e9ffee;padding:8px 10px}
   button{cursor:pointer}
 
-  /* Lobby overlay */
+  /* Aula */
   #lobby{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:40}
   #lobbyCard{width:min(520px,92vw);background:rgba(0,0,0,.35);border:1px solid var(--ui-bd);border-radius:16px;padding:14px}
   #lobbyCard h1{margin:4px 0 8px 0;font-size:20px}
@@ -26,11 +26,11 @@
   #countdown{display:none;font-size:28px;text-align:center;margin-top:8px}
   #readyInfo{opacity:.9}
 
-  /* Virtual joystick */
+  /* Sauvaohjain */
   #stick{position:fixed;left:14px;bottom:14px;width:120px;height:120px;border-radius:60px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);z-index:15;touch-action:none}
   #knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25)}
 
-  /* Mini-game overlay */
+  /* Minipeli */
   #mini{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.55);z-index:30;touch-action:none}
   #miniInner{display:flex;flex-direction:column;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);padding:16px 18px;border-radius:14px}
   #miniHeader{display:flex;gap:14px;align-items:center;justify-content:center}
@@ -42,13 +42,13 @@
   #bar{height:100%;width:0;background:linear-gradient(90deg,#18ff9b,#66ffd6)}
   #msg{font-size:14px;opacity:.9}
 
-  /* Leaderboard overlay (small) */
+  /* Pistetilasto */
   #lb{position:fixed;top:52px;right:10px;z-index:22;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 10px;font-size:13px;max-width:46vw;min-width:160px}
   #lb b{font-size:12px;opacity:.85}
   #lb .row{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:2px 0}
   #lb .name{max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* Error toast */
+  /* Virhepalkki */
   #err{position:fixed;right:8px;bottom:8px;max-width:70vw;font:12px/1.3 ui-monospace,Menlo,monospace;background:#280b0b;color:#ffdede;border:1px solid #ff8a80;border-radius:8px;padding:8px;display:none;z-index:999}
 
   @media (max-width:480px){ #title{display:none} #lb{max-width:54vw} }
@@ -62,597 +62,416 @@
   <span id="hud">⏱ 180 • 🟥 0 • ⚡ 1.0x</span>
 </div>
 
-<!-- LOBBY -->
+<!-- AULA -->
 <div id="lobby">
   <div id="lobbyCard">
-    <h1>Lobby</h1>
+    <h1>Aula</h1>
     <div id="lobbyRow">
-      <input id="room" placeholder="Room code (e.g. main)" style="flex:1 1 140px">
-      <input id="nameInp" placeholder="Nickname" list="nameList" style="flex:1 1 160px">
+      <input id="room" placeholder="Huonekoodi (esim. main)" style="flex:1 1 140px">
+      <input id="nameInp" placeholder="Nimimerkki" list="nameList" style="flex:1 1 160px">
       <datalist id="nameList"></datalist>
-      <button id="enter">Enter lobby</button>
-      <button id="ready" disabled>Ready</button>
+      <button id="enter">Liity aulaan</button>
+      <button id="ready" disabled>Valmis</button>
     </div>
-    <div id="readyInfo" class="pill">Ready: <span id="rc">0</span> / <span id="pc">0</span></div>
-    <div id="countdown">Starting in <b id="cd">5</b>…</div>
+    <div id="readyInfo" class="pill">Valmiina: <span id="rc">0</span> / <span id="pc">0</span></div>
+    <div id="countdown">Käynnistyy <b id="cd">5</b>…</div>
     <div id="players"></div>
   </div>
 </div>
 
-<!-- Mini-game -->
+<!-- Minipeli -->
 <div id="mini">
   <div id="miniInner">
     <div id="miniHeader">
-      <div id="puffCounter">Puffs: 0</div>
-      <div id="miniClock">6s</div>
+      <div id="puffCounter">Imuja: 0</div>
+      <div id="miniClock">6 s</div>
     </div>
     <div id="smokeSprite">🚬</div>
     <button id="tapBtn">Polta</button>
     <div id="meter"><div id="bar"></div></div>
-    <div id="msg">Tapaa nopeasti — palkki valuu taaksepäin!</div>
+    <div id="msg">Naputa nopeasti — palkki valuu taaksepäin!</div>
   </div>
 </div>
 
-<!-- Joystick -->
+<!-- Sauvaohjain -->
 <div id="stick"><div id="knob"></div></div>
 
-<!-- Tiny live leaderboard -->
-<div id="lb"><b>🏆 Leaderboard</b><div id="lbList">(empty)</div></div>
+<!-- Pistetilasto -->
+<div id="lb"><b>🏆 Pistetaulukko</b><div id="lbList">(tyhjä)</div></div>
 
 <div id="err"></div>
 
-<!-- Firebase compat SDKs -->
+<!-- Firebase-compat SDK:t -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <script>
-/*** ===== FIREBASE SETUP + ROOM ===== ***/
-let ROOM = new URLSearchParams(location.search).get('room') || 'main';
+/* ======= Kaikki JS yhdessä lohkossa, jotta kuuntelijat varmuudella rekisteröityvät ======= */
+(function(){
+  const toast = (s)=>{ const el=document.getElementById('err'); el.style.display='block'; el.textContent=s; console.log('[LationCup]', s); };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCtrAUvtKZrPtWqT2r4L52jxzms-Xhc9JQ",
-  authDomain: "lation-cb350.firebaseapp.com",
-  databaseURL: "https://lation-cb350-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "lation-cb350",
-  storageBucket: "lation-cb350.firebasestorage.app",
-  messagingSenderId: "586891618356",
-  appId: "1:586891618356:web:067b08669dd69725e54261"
-};
-
-let FB = {enabled:false, app:null, db:null, auth:null, uid:null};
-function toast(s){ const el=document.getElementById('err'); el.style.display='block'; el.textContent=s; console.log('[LationCup]', s); }
-
-try{
-  FB.app = firebase.initializeApp(firebaseConfig);
-  FB.db  = firebase.database();
-  FB.auth= firebase.auth();
-  FB.enabled = true;
-  toast('Firebase initialized ✓');
-}catch(e){ toast('Firebase init failed: '+e); FB.enabled=false; }
-</script>
-
-<script>
-/* =================== Core =================== */
-const CV = document.getElementById('cv');
-const CTX = CV.getContext('2d');
-const UI = {
-  hud: document.getElementById('hud'),
-  // lobby
-  lobby: document.getElementById('lobby'),
-  room: document.getElementById('room'),
-  nameInp: document.getElementById('nameInp'),
-  nameList: document.getElementById('nameList'),
-  enter: document.getElementById('enter'),
-  readyBtn: document.getElementById('ready'),
-  playersBox: document.getElementById('players'),
-  rc: document.getElementById('rc'),
-  pc: document.getElementById('pc'),
-  cdWrap: document.getElementById('countdown'),
-  cdNum: document.getElementById('cd'),
-  // mini
-  mini: document.getElementById('mini'),
-  tapBtn: document.getElementById('tapBtn'),
-  bar: document.getElementById('bar'),
-  miniClock: document.getElementById('miniClock'),
-  puffCounter: document.getElementById('puffCounter'),
-  smokeSprite: document.getElementById('smokeSprite'),
-  // controls
-  stick: document.getElementById('stick'),
-  knob: document.getElementById('knob'),
-  // leaderboard
-  lbList: document.getElementById('lbList'),
-};
-
-const DEFAULT_NAMES = ["MalluBoi","RookiKeuhko","Imuri","Rutkula","SheebaEnjoyer","Toomo_on_paras","Jape"];
-UI.nameList.innerHTML = DEFAULT_NAMES.map(n=>`<option value="${n}"></option>`).join('');
-UI.nameInp.value = DEFAULT_NAMES[Math.floor(Math.random()*DEFAULT_NAMES.length)];
-UI.room.value = ROOM;
-
-/* ====== Fullscreen canvas sizing ====== */
-function sizeCanvas(){
-  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-  const w = Math.round(window.innerWidth  * dpr);
-  const h = Math.round(window.innerHeight * dpr);
-  CV.width = w; CV.height = h;
-  CTX.setTransform(dpr,0,0,dpr,0,0);
-}
-window.addEventListener('resize', sizeCanvas);
-window.addEventListener('orientationchange', ()=>setTimeout(sizeCanvas, 100));
-sizeCanvas();
-
-/* ====== World / Player ====== */
-const WORLD = {w:1200,h:900}; // smaller map
-const G = {phase:'lobby', time:180, score:0, mult:1, speedBase:140, t:0};
-const P = {x:WORLD.w/2, y:WORLD.h/2, r:16, color:randColor(), vx:0, vy:0, photo:null, name:UI.nameInp.value};
-const CAM = {x:P.x, y:P.y};
-const ITEMS = new Map();
-const OTHERS = new Map();
-const MY_CLAIM_PENDING = new Set();
-const MY_CLAIM_RESOLVED = new Set();
-
-/* ====== Images (from repo root) with fallbacks ====== */
-const PATHS = {
-  marl:  'mallu.png',
-  cup:   'cup.png',
-  tank:  'tank.png',
-  shee:  'sheeba.png',
-  smoke1:'smoke1.png',
-  smoke2:'player2.png',
-  player:'player.png'
-};
-function loadImage(path, onok){ const img=new Image(); img.onload=()=>onok&&onok(img); img.onerror=()=>onok&&onok(null); img.src=path; }
-const TYPES = {
-  MARLB:{emoji:'🟥', r:16, img:null},
-  CUP:{emoji:'🥤', r:14, img:null},
-  TANK:{emoji:'🛢️', r:18, img:null},
-  SHEE:{emoji:'🥫', r:15, img:null},
-};
-const SMOKE = {img1:null,img2:null,hasImgs:false};
-let DEFAULT_AVATAR = null;
-loadImage(PATHS.marl,  img=>{ if(img) TYPES.MARLB.img=img; });
-loadImage(PATHS.cup,   img=>{ if(img) TYPES.CUP.img=img; });
-loadImage(PATHS.tank,  img=>{ if(img) TYPES.TANK.img=img; });
-loadImage(PATHS.shee,  img=>{ if(img) TYPES.SHEE.img=img; });
-loadImage(PATHS.smoke1,img=>{ SMOKE.img1=img; SMOKE.hasImgs=!!(SMOKE.img1&&SMOKE.img2); });
-loadImage(PATHS.smoke2,img=>{ SMOKE.img2=img; SMOKE.hasImgs=!!(SMOKE.img1&&SMOKE.img2); });
-loadImage(PATHS.player,img=>{ DEFAULT_AVATAR=img; P.photo=img; });
-
-/* ====== Lobby enter / ready ====== */
-let unsubPlayers=null, unsubItems=null, unsubState=null;
-
-UI.enter.onclick = async () => {
+  /* Firebase */
+  const firebaseConfig = {
+    apiKey: "AIzaSyCtrAUvtKZrPtWqT2r4L52jxzms-Xhc9JQ",
+    authDomain: "lation-cb350.firebaseapp.com",
+    databaseURL: "https://lation-cb350-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "lation-cb350",
+    storageBucket: "lation-cb350.firebasestorage.app",
+    messagingSenderId: "586891618356",
+    appId: "1:586891618356:web:067b08669dd69725e54261"
+  };
+  let FB={enabled:false, db:null, auth:null, uid:null};
   try{
-    ROOM = (UI.room.value||'').trim() || 'main';
-    P.name = (UI.nameInp.value||'').trim() || DEFAULT_NAMES[0];
+    firebase.initializeApp(firebaseConfig);
+    FB.db=firebase.database(); FB.auth=firebase.auth(); FB.enabled=true;
+    toast('Firebase alustettu ✓');
+  }catch(e){ toast('Firebase-virhe: '+e); }
 
-    if (!FB.enabled) { toast('Firebase required for lobby.'); return; }
-    toast('Joining lobby…');
+  /* UI */
+  const CV=document.getElementById('cv'), CTX=CV.getContext('2d');
+  const UI={
+    hud:document.getElementById('hud'),
+    lobby:document.getElementById('lobby'),
+    room:document.getElementById('room'),
+    nameInp:document.getElementById('nameInp'),
+    nameList:document.getElementById('nameList'),
+    enter:document.getElementById('enter'),
+    readyBtn:document.getElementById('ready'),
+    playersBox:document.getElementById('players'),
+    rc:document.getElementById('rc'), pc:document.getElementById('pc'),
+    cdWrap:document.getElementById('countdown'), cdNum:document.getElementById('cd'),
+    mini:document.getElementById('mini'), tapBtn:document.getElementById('tapBtn'),
+    bar:document.getElementById('bar'), miniClock:document.getElementById('miniClock'),
+    puffCounter:document.getElementById('puffCounter'), smokeSprite:document.getElementById('smokeSprite'),
+    stick:document.getElementById('stick'), knob:document.getElementById('knob'),
+    lbList:document.getElementById('lbList'),
+  };
 
-    await FB.auth.signInAnonymously();
-    FB.uid = FB.auth.currentUser.uid;
+  const DEFAULT_NAMES=["MalluBoi","RookiKeuhko","Imuri","Rutkula","SheebaEnjoyer","Toomo_on_paras","Jape"];
+  UI.nameList.innerHTML = DEFAULT_NAMES.map(n=>`<option value="${n}"></option>`).join('');
+  let ROOM=new URLSearchParams(location.search).get('room')||'main';
+  UI.room.value=ROOM;
+  UI.nameInp.value=DEFAULT_NAMES[Math.floor(Math.random()*DEFAULT_NAMES.length)];
 
-    const pRef = FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`);
-    pRef.onDisconnect().remove();
-    await pRef.set({name:P.name, x:P.x, y:P.y, score:0, ts:Date.now(), color:P.color, ready:false});
-    subscribeRoom();
-    UI.readyBtn.disabled = false;
-    toast('Joined room ✓');
-  }catch(e){
-    toast('Enter lobby failed: ' + e);
+  /* Kanvaasin koko */
+  function sizeCanvas(){
+    const dpr=Math.max(1,Math.floor(window.devicePixelRatio||1));
+    CV.width=Math.round(innerWidth*dpr); CV.height=Math.round(innerHeight*dpr);
+    CTX.setTransform(dpr,0,0,dpr,0,0);
   }
-};
+  addEventListener('resize', sizeCanvas); addEventListener('orientationchange', ()=>setTimeout(sizeCanvas,100)); sizeCanvas();
 
-UI.readyBtn.onclick = async () => {
-  if (!FB.enabled || !FB.uid) return;
-  UI.readyBtn.disabled = true; UI.readyBtn.textContent = "Ready ✓";
-  await FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}/ready`).set(true);
-};
+  /* Maailma */
+  const WORLD={w:1200,h:900};
+  const G={phase:'lobby', time:180, score:0, mult:1, speedBase:140, t:0};
+  const P={x:WORLD.w/2,y:WORLD.h/2,r:16,color:randColor(),vx:0,vy:0,photo:null,name:UI.nameInp.value};
+  const CAM={x:P.x,y:P.y}; const ITEMS=new Map(); const OTHERS=new Map();
+  const MY_CLAIM_RESOLVED=new Set();
 
-function subscribeRoom(){
-  // players
-  const pRef = FB.db.ref(`lationcup/rooms/${ROOM}/players`);
-  pRef.on('value', onPlayers);
-  unsubPlayers = ()=>pRef.off();
-  // items
-  const iRef = FB.db.ref(`lationcup/rooms/${ROOM}/items`);
-  iRef.on('value', onItems);
-  unsubItems = ()=>iRef.off();
-  // state
-  const sRef = FB.db.ref(`lationcup/rooms/${ROOM}/state`);
-  sRef.on('value', onState);
-  unsubState = ()=>sRef.off();
+  /* Kuvat (juurihakemisto) */
+  const PATHS={marl:'mallu.png',cup:'cup.png',tank:'tank.png',shee:'sheeba.png',smoke1:'smoke1.png',smoke2:'player2.png',player:'player.png'};
+  const loadImage=(p,cb)=>{const i=new Image(); i.onload=()=>cb&&cb(i); i.onerror=()=>cb&&cb(null); i.src=p;};
+  const TYPES={MARLB:{emoji:'🟥',r:16,img:null}, CUP:{emoji:'🥤',r:14,img:null}, TANK:{emoji:'🛢️',r:18,img:null}, SHEE:{emoji:'🥫',r:15,img:null}};
+  const SMOKE={img1:null,img2:null};
+  let DEFAULT_AVATAR=null;
+  loadImage(PATHS.marl,i=>{if(i)TYPES.MARLB.img=i;});
+  loadImage(PATHS.cup,i=>{if(i)TYPES.CUP.img=i;});
+  loadImage(PATHS.tank,i=>{if(i)TYPES.TANK.img=i;});
+  loadImage(PATHS.shee,i=>{if(i)TYPES.SHEE.img=i;});
+  loadImage(PATHS.smoke1,i=>{SMOKE.img1=i;});
+  loadImage(PATHS.smoke2,i=>{SMOKE.img2=i;});
+  loadImage(PATHS.player,i=>{DEFAULT_AVATAR=i; P.photo=i;});
 
-  // seed items if absent
-  iRef.once('value').then(s=>{
-    if(!s.exists()){
-      const batch={}; for(let i=0;i<25;i++){ const id=FB.db.ref().push().key; batch[id]={id,type:pickWeighted(['MARLB','CUP','SHEE','TANK'],[0.5,0.25,0.18,0.07]),x:rand(40,WORLD.w-40),y:rand(40,WORLD.h-40)}; }
-      iRef.set(batch);
-    }
-  });
-}
+  /* Aula: liittyminen ja valmis */
+  let unsubPlayers=null, unsubItems=null, unsubState=null;
 
-function onPlayers(snap){
-  const v=snap.val()||{};
-  OTHERS.clear();
-  let count=0, ready=0;
-  const rows=[];
-  for (const [uid,p] of Object.entries(v)){
-    if (uid!==FB.uid) OTHERS.set(uid,p);
-    count++; if (p.ready) ready++;
-    rows.push(`<div class="prow"><div>${escapeHtml(p.name||'Anon')}</div><div class="pill">${p.ready?'Ready ✓':'Waiting'}</div></div>`);
-  }
-  UI.playersBox.innerHTML = rows.join('') || '(no players yet)';
-  UI.pc.textContent = String(count);
-  UI.rc.textContent = String(ready);
+  UI.enter.onclick = async ()=>{
+    try{
+      ROOM=(UI.room.value||'').trim()||'main';
+      P.name=(UI.nameInp.value||'').trim()||DEFAULT_NAMES[0];
+      if(!FB.enabled) return toast('Firebase vaaditaan moninpeliin.');
+      toast('Liitytään aulaan…');
+      await FB.auth.signInAnonymously();
+      FB.uid=FB.auth.currentUser.uid;
+      const pRef=FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`);
+      pRef.onDisconnect().remove();
+      await pRef.set({name:P.name,x:P.x,y:P.y,score:0,ts:Date.now(),color:P.color,ready:false});
+      subscribeRoom();
+      UI.readyBtn.disabled=false;
+      toast('Liitytty huoneeseen ✓');
+    }catch(e){ toast('Liittyminen epäonnistui: '+e); }
+  };
 
-  // everyone ready -> countdown
-  if (count>0 && ready===count){
-    const sRef = FB.db.ref(`lationcup/rooms/${ROOM}/state`);
-    sRef.transaction(cur=>{
-      if (cur && (cur.phase==='countdown' || cur.phase==='playing')) return;
-      return {phase:'countdown', startAt: Date.now(), duration: 5000};
+  UI.readyBtn.onclick = async ()=>{
+    if(!FB.enabled||!FB.uid) return;
+    UI.readyBtn.disabled=true; UI.readyBtn.textContent='Valmis ✓';
+    await FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}/ready`).set(true);
+  };
+
+  function subscribeRoom(){
+    const pRef=FB.db.ref(`lationcup/rooms/${ROOM}/players`);
+    pRef.on('value',onPlayers); unsubPlayers=()=>pRef.off();
+    const iRef=FB.db.ref(`lationcup/rooms/${ROOM}/items`);
+    iRef.on('value',onItems);   unsubItems=()=>iRef.off();
+    const sRef=FB.db.ref(`lationcup/rooms/${ROOM}/state`);
+    sRef.on('value',onState);   unsubState=()=>sRef.off();
+
+    // alusta itemit jos puuttuvat
+    iRef.once('value').then(s=>{
+      if(!s.exists()){
+        const batch={}; for(let i=0;i<25;i++){ const id=FB.db.ref().push().key;
+          batch[id]={id,type:pickWeighted(['MARLB','CUP','SHEE','TANK'],[0.5,0.25,0.18,0.07]),x:rand(40,WORLD.w-40),y:rand(40,WORLD.h-40)};
+        }
+        iRef.set(batch);
+      }
     });
   }
 
-  renderLeaderboard(v);
-}
-
-function onItems(snap){
-  const v=snap.val()||{};
-  ITEMS.clear();
-  for(const id in v){
-    const it = v[id];
-    ITEMS.set(id, it);
-    // safety net resolve
-    if (it.claimedBy && FB.uid && it.claimedBy===FB.uid && !MY_CLAIM_RESOLVED.has(id)){
-      MY_CLAIM_RESOLVED.add(id);
-      localResolve(it, true);
-      FB.db.ref(`lationcup/rooms/${ROOM}/items/${id}`).remove().catch(()=>{});
+  function onPlayers(snap){
+    const v=snap.val()||{}; OTHERS.clear();
+    let count=0,ready=0; const rows=[];
+    for (const [uid,p] of Object.entries(v)){
+      if(uid!==FB.uid) OTHERS.set(uid,p);
+      count++; if(p.ready) ready++;
+      rows.push(`<div class="prow"><div>${escapeHtml(p.name||'Anon')}</div><div class="pill">${p.ready?'Valmis ✓':'Odottaa'}</div></div>`);
     }
-  }
-}
+    UI.playersBox.innerHTML = rows.join('') || '(ei pelaajia vielä)';
+    UI.pc.textContent=String(count); UI.rc.textContent=String(ready);
+    renderLeaderboard(v);
 
-function onState(snap){
-  const st = snap.val();
-  if (!st || st.phase!=='countdown'){
-    UI.cdWrap.style.display='none';
-  }
-  if (!st){
-    G.phase='lobby'; UI.lobby.style.display='flex';
-    return;
-  }
-  if (st.phase==='countdown'){
-    G.phase='countdown';
-    UI.lobby.style.display='flex';
-    UI.cdWrap.style.display='block';
-    tickCountdown(st);
-  } else if (st.phase==='playing'){
-    const elapsed = Math.max(0, (Date.now() - (st.startAt||Date.now()))/1000);
-    startPlayWithRemaining(Math.max(0, 180 - elapsed));
-  }
-}
-function tickCountdown(st){
-  const update = ()=>{
-    if (G.phase!=='countdown') return;
-    const remain = Math.max(0, st.duration - (Date.now() - st.startAt));
-    UI.cdNum.textContent = String(Math.ceil(remain/1000));
-    if (remain<=0){
-      FB.db.ref(`lationcup/rooms/${ROOM}/state`).transaction(cur=>{
-        if (cur && cur.phase==='playing') return;
-        return {phase:'playing', startAt: Date.now()};
+    if(count>0 && ready===count){
+      const sRef=FB.db.ref(`lationcup/rooms/${ROOM}/state`);
+      sRef.transaction(cur=>{
+        if(cur && (cur.phase==='countdown'||cur.phase==='playing')) return;
+        return {phase:'countdown', startAt:Date.now(), duration:5000};
       });
-    } else {
-      requestAnimationFrame(update);
     }
-  };
-  requestAnimationFrame(update);
-}
+  }
 
-/* ====== Gameplay / loop ====== */
-const Mini = {active:false, taps:0, time:6, progress:0, puffs:0, toggle:false};
+  function onItems(snap){
+    const v=snap.val()||{}; ITEMS.clear();
+    for(const id in v){
+      const it=v[id]; ITEMS.set(id,it);
+      if(it.claimedBy && FB.uid && it.claimedBy===FB.uid && !MY_CLAIM_RESOLVED.has(id)){
+        MY_CLAIM_RESOLVED.add(id);
+        localResolve(it,true);
+        FB.db.ref(`lationcup/rooms/${ROOM}/items/${id}`).remove().catch(()=>{});
+      }
+    }
+  }
 
-let last = performance.now();
-function loop(now){
-  try { const dt=Math.min(0.033,(now-last)/1000); last=now; update(dt); draw(); }
-  catch(e){ logErr("Loop error: "+(e&&e.stack?e.stack:e)); }
+  function onState(snap){
+    const st=snap.val();
+    if(!st || st.phase!=='countdown') UI.cdWrap.style.display='none';
+    if(!st){ G.phase='lobby'; UI.lobby.style.display='flex'; return; }
+    if(st.phase==='countdown'){
+      G.phase='countdown'; UI.lobby.style.display='flex'; UI.cdWrap.style.display='block'; tickCountdown(st);
+    } else if(st.phase==='playing'){
+      const elapsed=Math.max(0,(Date.now()-(st.startAt||Date.now()))/1000);
+      startPlayWithRemaining(Math.max(0,180-elapsed));
+    }
+  }
+  function tickCountdown(st){
+    const upd=()=>{
+      if(G.phase!=='countdown') return;
+      const remain=Math.max(0, st.duration - (Date.now()-st.startAt));
+      UI.cdNum.textContent=String(Math.ceil(remain/1000));
+      if(remain<=0){
+        FB.db.ref(`lationcup/rooms/${ROOM}/state`).transaction(cur=>{
+          if(cur && cur.phase==='playing') return;
+          return {phase:'playing', startAt:Date.now()};
+        });
+      } else requestAnimationFrame(upd);
+    };
+    requestAnimationFrame(upd);
+  }
+
+  /* Pelisilmukka */
+  const Mini={active:false,taps:0,time:6,progress:0,puffs:0,toggle:false};
+  let last=performance.now();
+  function loop(now){ try{const dt=Math.min(0.033,(now-last)/1000); last=now; update(dt); draw();}catch(e){toast('Loop-virhe: '+e);} requestAnimationFrame(loop); }
   requestAnimationFrame(loop);
-}
-requestAnimationFrame(loop);
 
-function update(dt){
-  G.t += dt;
+  function update(dt){
+    G.t+=dt;
+    if(G.phase==='playing'){
+      G.time=Math.max(0,G.time-dt);
+      if(G.time<=0){ G.phase='over'; pushPlayer(); UI.lobby.style.display='flex'; }
+    }
+    UI.hud.textContent=`⏱ ${Math.ceil(G.time)} • 🟥 ${G.score||0} • ⚡ ${G.mult.toFixed(1)}x`;
 
-  if (G.phase==='playing'){
-    G.time = Math.max(0, G.time - dt);
-    if (G.time<=0){ G.phase='over'; pushPlayer(); UI.lobby.style.display='flex'; }
+    applyJoystick(dt);
+    const spd=G.speedBase*G.mult;
+    P.x=clamp(P.x+P.vx*spd*dt,20,WORLD.w-20);
+    P.y=clamp(P.y+P.vy*spd*dt,20,WORLD.h-20);
+
+    CAM.x+=(P.x-CAM.x)*0.15; CAM.y+=(P.y-CAM.y)*0.15;
+
+    if(G.phase==='playing' && !Mini.active){
+      for(const it of ITEMS.values()){
+        if(it.claimedBy) continue;
+        const dx=it.x-P.x, dy=it.y-P.y, rr=(getType(it).r+P.r)**2;
+        if(dx*dx+dy*dy<=rr){ claimItem(it); break; }
+      }
+    }
+    if(G.mult>1) G.mult=Math.max(1,G.mult-0.15*dt);
+    pushPlayer();
   }
 
-  UI.hud.textContent = `⏱ ${Math.ceil(G.time)} • 🟥 ${G.score||0} • ⚡ ${G.mult.toFixed(1)}x`;
+  function draw(){
+    const w=CV.clientWidth,h=CV.clientHeight;
+    const grd=CTX.createLinearGradient(0,0,0,h); grd.addColorStop(0,'#072017'); grd.addColorStop(1,'#0a2d21');
+    CTX.fillStyle=grd; CTX.fillRect(0,0,w,h);
 
-  applyJoystick(dt);
+    drawGrid(); drawWalls();
 
-  const spd = G.speedBase * G.mult;
-  P.x = clamp(P.x + P.vx * spd * dt, 20, WORLD.w-20);
-  P.y = clamp(P.y + P.vy * spd * dt, 20, WORLD.h-20);
+    const list=Array.from(ITEMS.values()).filter(i=>!i.claimedBy).sort((a,b)=>a.y-b.y);
+    for(const it of list) drawItem(it);
 
-  CAM.x += (P.x - CAM.x)*0.15;
-  CAM.y += (P.y - CAM.y)*0.15;
+    for(const g of OTHERS.values()){
+      if(Date.now()-g.ts>4000) continue;
+      drawPlayer(g.x,g.y,16,g.color, DEFAULT_AVATAR);
+      drawName(g.name||'Anon', g.x,g.y,16);
+    }
+    drawPlayer(P.x,P.y,16,P.color,P.photo||DEFAULT_AVATAR);
+    drawName(P.name||'Minä', P.x,P.y,16);
 
-  if (G.phase==='playing' && !Mini.active){
-    for (const it of ITEMS.values()){
-      if (it.claimedBy) continue;
-      const dx = it.x - P.x, dy = it.y - P.y;
-      const rr = (getType(it).r + P.r)**2;
-      if (dx*dx+dy*dy <= rr){ claimItem(it); break; }
+    if(G.phase==='lobby') centerText("Odotetaan aulassa…", 120, 18);
+    if(G.phase==='over')  centerText(`Aika loppui! Pisteet: ${G.score}`, 120, 20);
+  }
+
+  /* Piirtoapuja */
+  function drawGrid(){
+    CTX.strokeStyle='rgba(255,255,255,.06)'; CTX.lineWidth=1;
+    const step=80, left=CAM.x - CV.clientWidth/2, top=CAM.y - CV.clientHeight/2;
+    for(let y=Math.floor(top/step)*step; y<top+CV.clientHeight+step; y+=step){
+      const yS=worldToScreenY(y); CTX.beginPath(); CTX.moveTo(0,yS); CTX.lineTo(CV.clientWidth,yS); CTX.stroke();
+    }
+    for(let x=Math.floor(left/step)*step; x<left+CV.clientWidth+step; x+=step){
+      const xS=worldToScreenX(x); CTX.beginPath(); CTX.moveTo(xS,0); CTX.lineTo(xS,CV.clientHeight); CTX.stroke();
     }
   }
-
-  if (G.mult>1) G.mult = Math.max(1, G.mult - 0.15*dt);
-
-  pushPlayer();
-}
-
-function draw(){
-  const w = CV.clientWidth, h = CV.clientHeight;
-  const grd = CTX.createLinearGradient(0,0,0,h);
-  grd.addColorStop(0,'#072017'); grd.addColorStop(1,'#0a2d21');
-  CTX.fillStyle = grd; CTX.fillRect(0,0,w,h);
-
-  drawGrid();
-  drawWalls();
-
-  const list = Array.from(ITEMS.values()).filter(i=>!i.claimedBy).sort((a,b)=>a.y-b.y);
-  for (const it of list) drawItem(it);
-
-  for (const g of OTHERS.values()){
-    if (Date.now()-g.ts>4000) continue;
-    drawPlayer(g.x,g.y,16,g.color, DEFAULT_AVATAR);
-    drawName(g.name || 'Anon', g.x, g.y, 16);
+  function drawWalls(){
+    const sBR=worldToScreen(WORLD.w,WORLD.h);
+    CTX.strokeStyle='rgba(24,255,155,.65)'; CTX.lineWidth=6;
+    CTX.beginPath();
+    CTX.rect(worldToScreenX(0)+3,worldToScreenY(0)+3,(sBR.x-worldToScreenX(0))-6,(sBR.y-worldToScreenY(0))-6);
+    CTX.stroke();
+  }
+  function centerText(t,y,size){ CTX.fillStyle='rgba(255,255,255,.9)'; CTX.font=`bold ${size}px system-ui`; CTX.textAlign='center'; CTX.fillText(t,CV.clientWidth/2,y); CTX.textAlign='left'; }
+  function drawPlayer(wx,wy,r,col,photo){
+    const s=worldToScreen(wx,wy), rad=r*s.scale;
+    CTX.fillStyle='rgba(0,0,0,.25)'; CTX.beginPath(); CTX.ellipse(s.x,s.y+3*s.scale,rad,rad*0.5,0,0,Math.PI*2); CTX.fill();
+    CTX.save(); CTX.beginPath(); CTX.arc(s.x,s.y,rad,0,Math.PI*2); CTX.clip();
+    if(photo) CTX.drawImage(photo, s.x-rad, s.y-rad, rad*2, rad*2); else { CTX.fillStyle=col; CTX.fillRect(s.x-rad,s.y-rad,rad*2,rad*2); }
+    CTX.restore(); CTX.strokeStyle='rgba(255,255,255,.25)'; CTX.lineWidth=2; CTX.beginPath(); CTX.arc(s.x,s.y,rad-1,0,Math.PI*2); CTX.stroke();
+  }
+  function drawName(name,wx,wy,r){
+    const s=worldToScreen(wx,wy), y=s.y+(r*s.scale)+14;
+    CTX.font='600 13px system-ui'; CTX.textAlign='center';
+    CTX.fillStyle='rgba(0,0,0,.55)'; CTX.fillText(name,s.x,y+1);
+    CTX.fillStyle='rgba(255,255,255,.95)'; CTX.fillText(name,s.x,y);
+  }
+  function drawItem(it){
+    const t=getType(it), s=worldToScreen(it.x,it.y);
+    if(t.img){ const size=Math.round(t.r*2.4*s.scale); CTX.drawImage(t.img, s.x-size/2, s.y-size/2, size, size); }
+    else { CTX.font=`${Math.round(t.r*2.2*s.scale)}px system-ui,Apple Color Emoji,Segoe UI Emoji`; CTX.textAlign='center'; CTX.textBaseline='middle'; CTX.fillText(t.emoji,s.x,s.y); }
   }
 
-  drawPlayer(P.x,P.y,16,P.color,P.photo||DEFAULT_AVATAR);
-  drawName(P.name||'Me', P.x, P.y, 16);
+  /* Koordinaatit + apurit */
+  function worldToScreen(wx,wy){ const x=(wx-CAM.x)+CV.clientWidth/2; const y=(wy-CAM.y)+CV.clientHeight/2; const scale=0.9+(y/CV.clientHeight)*0.2; return {x,y,scale}; }
+  function worldToScreenX(wx){ return (wx-CAM.x)+CV.clientWidth/2; }
+  function worldToScreenY(wy){ return (wy-CAM.y)+CV.clientHeight/2; }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+  function randColor(){ const h=Math.floor(Math.random()*360); return `hsl(${h} 85% 60%)`; }
+  function getType(it){ return TYPES[it.type]||TYPES.MARLB; }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
-  if (G.phase==='lobby') centerText("Waiting in lobby…", 120, 18);
-  if (G.phase==='over')  centerText(`Finished! Score: ${G.score}`, 120, 20);
-}
-
-/* ====== Drawing helpers ====== */
-function drawGrid(){
-  CTX.strokeStyle = 'rgba(255,255,255,.06)'; CTX.lineWidth = 1;
-  const step = 80;
-  const left = CAM.x - CV.clientWidth/2, top = CAM.y - CV.clientHeight/2;
-  for (let y = Math.floor(top/step)*step; y<top+CV.clientHeight+step; y+=step){
-    const yS = worldToScreenY(y); CTX.beginPath(); CTX.moveTo(0, yS); CTX.lineTo(CV.clientWidth, yS); CTX.stroke();
-  }
-  for (let x = Math.floor(left/step)*step; x<left+CV.clientWidth+step; x+=step){
-    const xS = worldToScreenX(x); CTX.beginPath(); CTX.moveTo(xS, 0); CTX.lineTo(xS, CV.clientHeight); CTX.stroke();
-  }
-}
-function drawWalls(){
-  const sBR = worldToScreen(WORLD.w, WORLD.h);
-  CTX.strokeStyle = 'rgba(24,255,155,.65)';
-  CTX.lineWidth = 6;
-  CTX.beginPath();
-  CTX.rect(
-    worldToScreenX(0)+3, worldToScreenY(0)+3,
-    (sBR.x - worldToScreenX(0)) - 6,
-    (sBR.y - worldToScreenY(0)) - 6
-  );
-  CTX.stroke();
-}
-function centerText(t, y, size){ CTX.fillStyle='rgba(255,255,255,.9)'; CTX.font = `bold ${size}px system-ui`; CTX.textAlign='center'; CTX.fillText(t, CV.clientWidth/2, y); CTX.textAlign='left'; }
-
-function drawPlayer(wx,wy,r,col,photo){
-  const s = worldToScreen(wx,wy);
-  const rad = r*s.scale;
-  CTX.fillStyle='rgba(0,0,0,.25)'; CTX.beginPath(); CTX.ellipse(s.x, s.y+3*s.scale, rad, rad*0.5, 0, 0, Math.PI*2); CTX.fill();
-  CTX.save();
-  CTX.beginPath(); CTX.arc(s.x,s.y,rad,0,Math.PI*2); CTX.clip();
-  if (photo){ CTX.drawImage(photo, s.x-rad, s.y-rad, rad*2, rad*2); }
-  else { CTX.fillStyle=col; CTX.fillRect(s.x-rad, s.y-rad, rad*2, rad*2); }
-  CTX.restore();
-  CTX.strokeStyle='rgba(255,255,255,.25)'; CTX.lineWidth=2; CTX.beginPath(); CTX.arc(s.x,s.y,rad-1,0,Math.PI*2); CTX.stroke();
-}
-function drawName(name, wx, wy, r){
-  const s = worldToScreen(wx,wy);
-  const y = s.y + (r*s.scale) + 14;
-  CTX.font='600 13px system-ui'; CTX.textAlign='center';
-  CTX.fillStyle='rgba(0,0,0,.55)'; CTX.fillText(name, s.x, y+1);
-  CTX.fillStyle='rgba(255,255,255,.95)'; CTX.fillText(name, s.x, y);
-}
-function drawItem(it){
-  const t = getType(it);
-  const s = worldToScreen(it.x,it.y);
-  if (t.img){
-    const size = Math.round(t.r*2.4*s.scale);
-    CTX.drawImage(t.img, s.x-size/2, s.y-size/2, size, size);
-  } else {
-    CTX.font = `${Math.round(t.r*2.2*s.scale)}px system-ui,Apple Color Emoji,Segoe UI Emoji`;
-    CTX.textAlign='center'; CTX.textBaseline='middle';
-    CTX.fillText(t.emoji, s.x, s.y);
-  }
-}
-
-/* ====== Coords & utils ====== */
-function worldToScreen(wx,wy){
-  const x = (wx - CAM.x) + CV.clientWidth/2;
-  const y = (wy - CAM.y) + CV.clientHeight/2;
-  const scale = 0.9 + (y/CV.clientHeight)*0.2;
-  return {x,y,scale};
-}
-function worldToScreenX(wx){ return (wx - CAM.x) + CV.clientWidth/2; }
-function worldToScreenY(wy){ return (wy - CAM.y) + CV.clientHeight/2; }
-function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function rand(min,max){ return Math.random()*(max-min)+min; }
-function randColor(){ const h=Math.floor(Math.random()*360); return `hsl(${h} 85% 60%)`; }
-function getType(it){ return TYPES[it.type] || TYPES.MARLB; }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
-
-/* ====== Input (joystick + keys) ====== */
-let stickTouch=null, center=null, keyDir={x:0,y:0};
-UI.stick.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.changedTouches[0]; stickTouch=t.identifier; center=centerOf(UI.stick); moveKnob(center.x,center.y); }, {passive:false});
-UI.stick.addEventListener('touchmove',  e=>{ e.preventDefault(); const t=findTouch(e,stickTouch); if(!t)return; const dx=t.clientX-center.x, dy=t.clientY-center.y; const maxR=48, d=Math.hypot(dx,dy)||1; const nx=center.x+(d>maxR?dx/d*maxR:dx); const ny=center.y+(d>maxR?dy/d*maxR:dy); moveKnob(nx,ny); P.vx=(nx-center.x)/maxR; P.vy=(ny-center.y)/maxR; }, {passive:false});
-UI.stick.addEventListener('touchend',   e=>{ const t=findTouch(e,stickTouch); if(t){ stickTouch=null; P.vx=P.vy=0; moveKnob(center.x,center.y);} }, {passive:false});
-UI.stick.addEventListener('mousedown', e=>{ center=centerOf(UI.stick); const move=ev=>{ const dx=ev.clientX-center.x, dy=ev.clientY-center.y; const maxR=48, d=Math.hypot(dx,dy)||1; const nx=center.x+(d>maxR?dx/d*maxR:dx); const ny=center.y+(d>maxR?dy/d*maxR:dy); moveKnob(nx,ny); P.vx=(nx-center.x)/maxR; P.vy=(ny-center.y)/maxR; }; const up=()=>{ P.vx=P.vy=0; moveKnob(center.x,center.y); window.removeEventListener('mousemove',move); window.removeEventListener('mouseup',up); }; window.addEventListener('mousemove',move); window.addEventListener('mouseup',up); });
-window.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft'||e.key==='a')keyDir.x=-1; if(e.key==='ArrowRight'||e.key==='d')keyDir.x=1; if(e.key==='ArrowUp'||e.key==='w')keyDir.y=-1; if(e.key==='ArrowDown'||e.key==='s')keyDir.y=1; });
-window.addEventListener('keyup',   e=>{ if(['ArrowLeft','a','ArrowRight','d'].includes(e.key))keyDir.x=0; if(['ArrowUp','w','ArrowDown','s'].includes(e.key))keyDir.y=0; });
-function applyJoystick(dt){
-  if(keyDir.x||keyDir.y){ P.vx=keyDir.x; P.vy=keyDir.y; }
-  const m=Math.hypot(P.vx,P.vy); if(m>1e-3){ P.vx/=Math.max(1,m); P.vy/=Math.max(1,m); }
-  if(!stickTouch && !keyDir.x && !keyDir.y){
-    const decay=Math.exp(-6*dt); P.vx*=decay; P.vy*=decay;
-    if(Math.abs(P.vx)<0.01)P.vx=0; if(Math.abs(P.vy)<0.01)P.vy=0;
-  }
-}
-function centerOf(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; }
-function moveKnob(x,y){ if(!center) center=centerOf(UI.stick); UI.knob.style.transform=`translate(${x-center.x}px, ${y-center.y}px)`; }
-function findTouch(e,id){ for(const t of e.changedTouches) if(t.identifier===id) return t; return null; }
-
-/* ====== Items & Effects ====== */
-function spawnItem(){
-  const types=['MARLB','CUP','SHEE','TANK'];
-  const weights=[0.5,0.25,0.18,0.07];
-  const type=pickWeighted(types,weights);
-  const id=FB.enabled?FB.db.ref().push().key:'loc-'+Math.random().toString(36).slice(2);
-  const it={id,type,x:rand(40,WORLD.w-40),y:rand(40,WORLD.h-40),claimedBy:null};
-  ITEMS.set(it.id,it);
-  if(FB.enabled){ FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).set(it).catch(()=>{}); }
-}
-function pickWeighted(arr,w){ const s=w.reduce((a,b)=>a+b,0); let r=Math.random()*s; for(let i=0;i<arr.length;i++){ r-=w[i]; if(r<=0) return arr[i]; } return arr[0]; }
-
-function claimItem(it){
-  MY_CLAIM_PENDING.add(it.id);
-  if (!FB.enabled){ localResolve(it); return; }
-  const ref=FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`);
-  ref.transaction(cur=>{
-    if(!cur || cur.claimedBy) return cur || it;
-    cur.claimedBy = FB.uid;
-    return cur;
-  }, (err,committed,snap)=>{
-    if(err || !committed) return;
-    const claimed = snap.val();
-    ITEMS.set(it.id, claimed);
-    if (!MY_CLAIM_RESOLVED.has(it.id)) {
-      MY_CLAIM_RESOLVED.add(it.id);
-      localResolve(claimed, true);
+  /* Ohjain + näppis */
+  let stickTouch=null, center=null, keyDir={x:0,y:0};
+  function applyJoystick(dt){
+    if(keyDir.x||keyDir.y){ P.vx=keyDir.x; P.vy=keyDir.y; }
+    const m=Math.hypot(P.vx,P.vy); if(m>1e-3){ P.vx/=Math.max(1,m); P.vy/=Math.max(1,m); }
+    if(!stickTouch && !keyDir.x && !keyDir.y){
+      const decay=Math.exp(-6*dt); P.vx*=decay; P.vy*=decay;
+      if(Math.abs(P.vx)<0.01)P.vx=0; if(Math.abs(P.vy)<0.01)P.vy=0;
     }
-    FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).remove().catch(()=>{});
-  });
-}
-
-function localResolve(it){
-  try{
-    if (it.type==='CUP'){ G.mult = Math.min(3, G.mult+0.4); flash('#2e7d32'); }
-    else if (it.type==='TANK'){ G.mult = Math.min(4, G.mult+1.0); flash('#18ff9b'); }
-    else if (it.type==='SHEE'){ G.mult = Math.max(0.5, G.mult-0.6); flash('#aaaaaa'); }
-    else if (it.type==='MARLB'){ startMiniGame().then(()=>{}); }
-  }catch(e){ toast('resolve error: '+e); }
-  ITEMS.delete(it.id);
-}
-function flash(color){ CV.style.boxShadow=`0 0 0 5px ${color}66 inset`; setTimeout(()=> CV.style.boxShadow='',150); }
-
-/* ====== Mini‑game (6s) ====== */
-function startMiniGame(){
-  Mini.active=true; Mini.taps=0; Mini.time=6; Mini.progress=0; Mini.puffs=0; Mini.toggle=false;
-  UI.mini.style.display='flex'; UI.bar.style.width='0%'; UI.puffCounter.textContent='Puffs: 0'; UI.miniClock.textContent='6s';
-  setSprite(false);
-  const decayPerSec=0.18, gainPerTap=0.09; let lastTs=performance.now();
-  const onTap=(ev)=>{ ev&&ev.preventDefault(); if(!Mini.active)return;
-    Mini.taps++; Mini.toggle=!Mini.toggle; setSprite(Mini.toggle);
-    Mini.progress=Math.min(1, Mini.progress+gainPerTap);
-    if(Mini.progress>=1){ Mini.puffs++; UI.puffCounter.textContent=`Puffs: ${Mini.puffs}`; Mini.progress=0.6; }
-    UI.bar.style.width=(Mini.progress*100)+'%';
-  };
-  UI.tapBtn.onpointerdown=onTap;
-  return new Promise(resolve=>{
-    const secIv=setInterval(()=>{ Mini.time-=1; UI.miniClock.textContent=`${Math.max(0,Math.ceil(Mini.time))}s`; if(Mini.time<=0){ clearInterval(secIv); cancelAnimationFrame(anim); finish(); } },1000);
-    function tick(){ if(!Mini.active)return; const now=performance.now(); const dt=Math.min(0.05,(now-lastTs)/1000); lastTs=now; Mini.progress=Math.max(0, Mini.progress - decayPerSec*dt); UI.bar.style.width=(Mini.progress*100)+'%'; anim=requestAnimationFrame(tick); }
-    let anim=requestAnimationFrame(tick);
-    function finish(){ Mini.active=false; UI.mini.style.display='none'; G.score = (G.score||0) + Math.round(Mini.puffs * G.mult); resolve(Mini.puffs); }
-  });
-}
-function setSprite(useSecond){
-  if (SMOKE.img1 && SMOKE.img2){
-    const img=useSecond?SMOKE.img2:SMOKE.img1;
-    UI.smokeSprite.textContent=''; UI.smokeSprite.style.backgroundImage=''; UI.smokeSprite.innerHTML='';
-    const el=new Image(); el.src=img.src; el.style.width='100%'; el.style.height='100%'; el.style.objectFit='cover'; UI.smokeSprite.appendChild(el);
-  } else { UI.smokeSprite.style.backgroundImage=''; UI.smokeSprite.textContent = useSecond ? '😮‍💨' : '🚬'; }
-}
-
-/* ====== State helpers ====== */
-function startPlayWithRemaining(rem){
-  resetGame(); 
-  G.phase='playing';
-  G.time = rem;
-  UI.lobby.style.display='none';
-  UI.cdWrap.style.display='none';
-}
-function resetGame(){
-  G.time=180; G.mult=1; G.score=0;
-  P.name = (UI.nameInp.value||'').trim() || P.name;
-  P.x=WORLD.w/2; P.y=WORLD.h/2; P.vx=P.vy=0;
-  ITEMS.clear(); MY_CLAIM_PENDING.clear(); MY_CLAIM_RESOLVED.clear();
-  for (let i=0;i<25;i++) spawnItem();
-}
-
-/* ====== Multiplayer push/leaderboard ====== */
-function pushPlayer(){ 
-  if(!FB.enabled||!FB.uid)return; 
-  if(G.phase!=='playing'&&G.phase!=='over')return;
-  FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`).update({name:P.name, x:Math.round(P.x), y:Math.round(P.y), score:G.score||0, ts:Date.now(), color:P.color}).catch(()=>{});
-}
-function renderLeaderboard(playersObj){
-  const arr = Object.values(playersObj||{}).map(p=>({n:p.name||'Anon', s:p.score||0}));
-  arr.sort((a,b)=>b.s-a.s);
-  UI.lbList.innerHTML = arr.map((p,i)=>`
-    <div class="row">
-      <span class="name">${i+1}. ${escapeHtml(p.n)}</span>
-      <span>🟥 ${p.s}</span>
-    </div>
-  `).join('') || '<div class="row">(waiting)</div>';
-}
-
-/* ====== Misc helpers ====== */
-function centerOf(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; }
-function moveKnob(x,y){ if(!center) center=centerOf(UI.stick); UI.knob.style.transform=`translate(${x-center.x}px, ${y-center.y}px)`; }
-function findTouch(e,id){ for(const t of e.changedTouches) if(t.identifier===id) return t; return null; }
-function logErr(msg){ const box=document.getElementById('err'); box.style.display='block'; box.textContent=String(msg); }
-
-/* ====== Keyboard movement normalization ====== */
-let stickTouch=null, center=null, keyDir={x:0,y:0};
-function applyJoystick(dt){
-  if(keyDir.x||keyDir.y){ P.vx=keyDir.x; P.vy=keyDir.y; }
-  const m=Math.hypot(P.vx,P.vy); if(m>1e-3){ P.vx/=Math.max(1,m); P.vy/=Math.max(1,m); }
-  if(!stickTouch && !keyDir.x && !keyDir.y){
-    const decay=Math.exp(-6*dt); P.vx*=decay; P.vy*=decay;
-    if(Math.abs(P.vx)<0.01)P.vx=0; if(Math.abs(P.vy)<0.01)P.vy=0;
   }
-}
-UI.stick.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.changedTouches[0]; stickTouch=t.identifier; center=centerOf(UI.stick); moveKnob(center.x,center.y); }, {passive:false});
-UI.stick.addEventListener('touchmove',  e=>{ e.preventDefault(); const t=findTouch(e,stickTouch); if(!t)return; const dx=t.clientX-center.x, dy=t.clientY-center.y; const maxR=48, d=Math.hypot(dx,dy)||1; const nx=center.x+(d>maxR?dx/d*maxR:dx); const ny=center.y+(d>maxR?dy/d*maxR:dy); moveKnob(nx,ny); P.vx=(nx-center.x)/maxR; P.vy=(ny-center.y)/maxR; }, {passive:false});
-UI.stick.addEventListener('touchend',   e=>{ const t=findTouch(e,stickTouch); if(t){ stickTouch=null; P.vx=P.vy=0; moveKnob(center.x,center.y);} }, {passive:false});
-UI.stick.addEventListener('mousedown', e=>{ center=centerOf(UI.stick); const move=ev=>{ const dx=ev.clientX-center.x, dy=ev.clientY-center.y; const maxR=48, d=Math.hypot(dx,dy)||1; const nx=center.x+(d>maxR?dx/d*maxR:dx); const ny=center.y+(d>maxR?dy/d*maxR:dy); moveKnob(nx,ny); P.vx=(nx-center.x)/maxR; P.vy=(ny-center.y)/maxR; }; const up=()=>{ P.vx=P.vy=0; moveKnob(center.x,center.y); window.removeEventListener('mousemove',move); window.removeEventListener('mouseup',up); }; window.addEventListener('mousemove',move); window.addEventListener('mouseup',up); });
-window.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft'||e.key==='a')keyDir.x=-1; if(e.key==='ArrowRight'||e.key==='d')keyDir.x=1; if(e.key==='ArrowUp'||e.key==='w')keyDir.y=-1; if(e.key==='ArrowDown'||e.key==='s')keyDir.y=1; });
-window.addEventListener('keyup',   e=>{ if(['ArrowLeft','a','ArrowRight','d'].includes(e.key))keyDir.x=0; if(['ArrowUp','w','ArrowDown','s'].includes(e.key))keyDir.y=0; });
+  function centerOf(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; }
+  function moveKnob(x,y){ if(!center) center=centerOf(UI.stick); UI.knob.style.transform=`translate(${x-center.x}px, ${y-center.y}px)`; }
+  function findTouch(e,id){ for(const t of e.changedTouches) if(t.identifier===id) return t; return null; }
+  UI.stick.addEventListener('touchstart',e=>{e.preventDefault(); const t=e.changedTouches[0]; stickTouch=t.identifier; center=centerOf(UI.stick); moveKnob(center.x,center.y);},{passive:false});
+  UI.stick.addEventListener('touchmove', e=>{e.preventDefault(); const t=findTouch(e,stickTouch); if(!t)return; const dx=t.clientX-center.x,dy=t.clientY-center.y; const maxR=48,d=Math.hypot(dx,dy)||1; const nx=center.x+(d>maxR?dx/d*maxR:dx); const ny=center.y+(d>maxR?dy/d*maxR:dy); moveKnob(nx,ny); P.vx=(nx-center.x)/maxR; P.vy=(ny-center.y)/maxR;},{passive:false});
+  UI.stick.addEventListener('touchend',  e=>{const t=findTouch(e,stickTouch); if(t){stickTouch=null; P.vx=P.vy=0; moveKnob(center.x,center.y);}},{passive:false});
+  UI.stick.addEventListener('mousedown',e=>{center=centerOf(UI.stick); const move=ev=>{const dx=ev.clientX-center.x,dy=ev.clientY-center.y; const maxR=48,d=Math.hypot(dx,dy)||1; const nx=center.x+(d>maxR?dx/d*maxR:dx); const ny=center.y+(d>maxR?dy/d*maxR:dy); moveKnob(nx,ny); P.vx=(nx-center.x)/maxR; P.vy=(ny-center.y)/maxR;}; const up=()=>{P.vx=P.vy=0; moveKnob(center.x,center.y); removeEventListener('mousemove',move); removeEventListener('mouseup',up);}; addEventListener('mousemove',move); addEventListener('mouseup',up);});
+  addEventListener('keydown',e=>{ if(e.key==='ArrowLeft'||e.key==='a')keyDir.x=-1; if(e.key==='ArrowRight'||e.key==='d')keyDir.x=1; if(e.key==='ArrowUp'||e.key==='w')keyDir.y=-1; if(e.key==='ArrowDown'||e.key==='s')keyDir.y=1;});
+  addEventListener('keyup',e=>{ if(['ArrowLeft','a','ArrowRight','d'].includes(e.key))keyDir.x=0; if(['ArrowUp','w','ArrowDown','s'].includes(e.key))keyDir.y=0; });
 
-/* ===== util fns ===== */
-function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function rand(min,max){ return Math.random()*(max-min)+min; }
-function randColor(){ const h=Math.floor(Math.random()*360); return `hsl(${h} 85% 60%)`; }
-function getType(it){ return TYPES[it.type] || TYPES.MARLB; }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+  /* Itemit + vaikutukset */
+  function spawnItem(){ const types=['MARLB','CUP','SHEE','TANK'], w=[0.5,0.25,0.18,0.07]; const type=pickWeighted(types,w); const id=FB.enabled?FB.db.ref().push().key:'loc-'+Math.random().toString(36).slice(2); const it={id,type,x:rand(40,WORLD.w-40),y:rand(40,WORLD.h-40),claimedBy:null}; ITEMS.set(it.id,it); if(FB.enabled){ FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).set(it).catch(()=>{}); } }
+  function pickWeighted(arr,w){ const s=w.reduce((a,b)=>a+b,0); let r=Math.random()*s; for(let i=0;i<arr.length;i++){ r-=w[i]; if(r<=0) return arr[i]; } return arr[0]; }
+  function claimItem(it){
+    if(!FB.enabled){ localResolve(it); return; }
+    const ref=FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`);
+    ref.transaction(cur=>{ if(!cur || cur.claimedBy) return cur||it; cur.claimedBy=FB.uid; return cur; }, (err,committed,snap)=>{
+      if(err||!committed) return;
+      const claimed=snap.val(); ITEMS.set(it.id,claimed);
+      if(!MY_CLAIM_RESOLVED.has(it.id)){ MY_CLAIM_RESOLVED.add(it.id); localResolve(claimed,true); }
+      FB.db.ref(`lationcup/rooms/${ROOM}/items/${it.id}`).remove().catch(()=>{});
+    });
+  }
+  function localResolve(it){
+    if(it.type==='CUP'){ G.mult=Math.min(3,G.mult+0.4); flash('#2e7d32'); }
+    else if(it.type==='TANK'){ G.mult=Math.min(4,G.mult+1.0); flash('#18ff9b'); }
+    else if(it.type==='SHEE'){ G.mult=Math.max(0.5,G.mult-0.6); flash('#aaaaaa'); }
+    else if(it.type==='MARLB'){ startMiniGame().then(()=>{}); }
+    ITEMS.delete(it.id);
+  }
+  function flash(color){ CV.style.boxShadow=`0 0 0 5px ${color}66 inset`; setTimeout(()=>CV.style.boxShadow='',150); }
 
-/* ===== walls lines ===== */
-function worldToScreen(wx,wy){
-  const x = (wx - CAM.x) + CV.clientWidth/2;
-  const y = (wy - CAM.y) + CV.clientHeight/2;
-  const scale = 0.9 + (y/CV.clientHeight)*0.2;
-  return {x,y,scale};
-}
-function worldToScreenX(wx){ return (wx - CAM.x) + CV.clientWidth/2; }
-function worldToScreenY(wy){ return (wy - CAM.y) + CV.clientHeight/2; }
+  /* Minipeli 6 s */
+  function startMiniGame(){
+    Mini.active=true; Mini.taps=0; Mini.time=6; Mini.progress=0; Mini.puffs=0; Mini.toggle=false;
+    UI.mini.style.display='flex'; UI.bar.style.width='0%'; UI.puffCounter.textContent='Imuja: 0'; UI.miniClock.textContent='6 s'; setSprite(false);
+    const decayPerSec=0.18,gainPerTap=0.09; let lastTs=performance.now();
+    const onTap=(ev)=>{ ev&&ev.preventDefault(); if(!Mini.active)return; Mini.taps++; Mini.toggle=!Mini.toggle; setSprite(Mini.toggle); Mini.progress=Math.min(1,Mini.progress+gainPerTap); if(Mini.progress>=1){ Mini.puffs++; UI.puffCounter.textContent=`Imuja: ${Mini.puffs}`; Mini.progress=0.6; } UI.bar.style.width=(Mini.progress*100)+'%';};
+    UI.tapBtn.onpointerdown=onTap;
+    return new Promise(res=>{
+      const secIv=setInterval(()=>{ Mini.time-=1; UI.miniClock.textContent=`${Math.max(0,Math.ceil(Mini.time))} s`; if(Mini.time<=0){ clearInterval(secIv); cancelAnimationFrame(anim); finish(); } },1000);
+      function tick(){ if(!Mini.active)return; const now=performance.now(); const dt=Math.min(0.05,(now-lastTs)/1000); lastTs=now; Mini.progress=Math.max(0,Mini.progress-decayPerSec*dt); UI.bar.style.width=(Mini.progress*100)+'%'; anim=requestAnimationFrame(tick); }
+      let anim=requestAnimationFrame(tick);
+      function finish(){ Mini.active=false; UI.mini.style.display='none'; G.score=(G.score||0)+Math.round(Mini.puffs*G.mult); res(Mini.puffs); }
+    });
+  }
+  function setSprite(useSecond){
+    if(SMOKE.img1&&SMOKE.img2){
+      const img=useSecond?SMOKE.img2:SMOKE.img1;
+      UI.smokeSprite.textContent=''; UI.smokeSprite.innerHTML='';
+      const el=new Image(); el.src=img.src; el.style.width='100%'; el.style.height='100%'; el.style.objectFit='cover'; UI.smokeSprite.appendChild(el);
+    } else UI.smokeSprite.textContent = useSecond ? '😮‍💨' : '🚬';
+  }
+
+  /* Tilat */
+  function startPlayWithRemaining(rem){ resetGame(); G.phase='playing'; G.time=rem; UI.lobby.style.display='none'; UI.cdWrap.style.display='none'; }
+  function resetGame(){ G.time=180; G.mult=1; G.score=0; P.name=(UI.nameInp.value||'').trim()||P.name; P.x=WORLD.w/2; P.y=WORLD.h/2; P.vx=P.vy=0; ITEMS.clear(); MY_CLAIM_RESOLVED.clear(); for(let i=0;i<25;i++) spawnItem(); }
+
+  /* Pelaajan päivitys + taulukko */
+  function pushPlayer(){ if(!FB.enabled||!FB.uid) return; if(G.phase!=='playing'&&G.phase!=='over') return;
+    FB.db.ref(`lationcup/rooms/${ROOM}/players/${FB.uid}`).update({name:P.name,x:Math.round(P.x),y:Math.round(P.y),score:G.score||0,ts:Date.now(),color:P.color}).catch(()=>{});
+  }
+  function renderLeaderboard(players){ const arr=Object.values(players||{}).map(p=>({n:p.name||'Anon',s:p.score||0})).sort((a,b)=>b.s-a.s);
+    UI.lbList.innerHTML = arr.map((p,i)=>`<div class="row"><span class="name">${i+1}. ${escapeHtml(p.n)}</span><span>🟥 ${p.s}</span></div>`).join('') || '<div class="row">(odotetaan)</div>';
+  }
+
+  /* Matikka & koordit */
+  function worldToScreen(wx,wy){ const x=(wx-CAM.x)+CV.clientWidth/2, y=(wy-CAM.y)+CV.clientHeight/2, scale=0.9+(y/CV.clientHeight)*0.2; return {x,y,scale}; }
+  function worldToScreenX(wx){ return (wx-CAM.x)+CV.clientWidth/2; }
+  function worldToScreenY(wy){ return (wy-CAM.y)+CV.clientHeight/2; }
+
+  toast('Skripti käynnissä ✓');
+})();
 </script>
 </body>
 </html>
